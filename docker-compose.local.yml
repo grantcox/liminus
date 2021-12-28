@@ -1,0 +1,29 @@
+version: "3.3"
+
+services:
+  app:
+    build:
+      context: "./app"
+    volumes:
+      - ./app/:/usr/app/
+    labels:
+      - "service.name=liminus_fastapi"
+      - "traefik.docker.network=traefik_default"
+    command: uvicorn main:app --reload --port 5000 --no-server-header --no-date-header
+    ports:
+      - 5000
+
+  proxy:
+    image: traefik:latest
+    ports:
+      - 8078:443
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./proxy/traefik.yml:/etc/traefik/traefik.yml
+      - ./proxy/certs/local-liminus.crt:/etc/ssl/certs/public.crt
+      - ./proxy/certs/local-liminus.key:/etc/ssl/private/private.key
+    networks:
+      - traefik_default

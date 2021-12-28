@@ -1,0 +1,43 @@
+api:
+  dashboard: true
+
+  # Allow dashboard without auth for now, we restrict access with AWS Security Groups
+  insecure: true
+
+## Only enable HTTPS endpoint
+entryPoints:
+  web-secure:
+    address: ':443'
+    forwardedHeaders:
+      insecure: true
+
+# Setup TLS
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/ssl/certs/public.crt
+        keyFile: /etc/ssl/private/private.key
+
+# Enable docker provider
+providers:
+  docker:
+    # This network name should not change. It is created by docker-compose and
+    # should be used as external network by services that use traefik.
+    # See stats-service for an example.
+    network: traefik_default
+    exposedByDefault: false
+    constraints: "Label(`service.name`, `liminus_fastapi`)"
+  # This file provider is needed for Traefik to pick our custom certificate
+  file:
+    directory: /etc/traefik/
+    watch: true
+
+# This is needed because we terminate TLS at traefik, so requests to the app are made via HTTP
+serversTransport:
+  insecureSkipVerify: true
+
+log:
+  level: DEBUG
+
+accessLog: {}

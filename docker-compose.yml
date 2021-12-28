@@ -1,0 +1,20 @@
+version: "3.3"
+
+services:
+  app:
+    env_file: .env
+    restart: unless-stopped
+    networks:
+      - internal
+      - traefik_default
+    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --port 5000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.liminus_fastapi.tls=true"
+      - "traefik.http.routers.liminus_fastapi.rule=HostRegexp(`{var:.*}`)"
+      - "traefik.http.services.liminus_fastapi.loadbalancer.server.port=5000"
+      - "traefik.http.services.liminus_fastapi.loadbalancer.server.scheme=http"
+
+networks:
+  internal:
+  traefik_default:

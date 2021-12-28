@@ -1,0 +1,30 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+aioredis = "*"
+fastapi = "*"
+gunicorn = "*"
+httpx = "*"
+python-multipart = "*"
+sentry-sdk = "*"
+starlette_early_data = "*"
+uvicorn = "*"
+
+[dev-packages]
+black = "==21.12b0"
+coverage = "*"
+flake8 = "*"
+flake8-quotes = "*"
+isort = "*"
+mypy = "*"
+pytest = "*"
+safety = "*"
+
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = false
