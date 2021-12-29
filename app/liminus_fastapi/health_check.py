@@ -7,7 +7,7 @@ from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.routing import Route
 
 from liminus_fastapi.backends import valid_backends
-from liminus_fastapi.settings import config
+from liminus_fastapi.settings import config, logger
 from liminus_fastapi.utils import loggable_string, loggable_url
 
 
@@ -15,8 +15,6 @@ SUMMARY_STATUS_PERFECT = 'perfect'
 SUMMARY_STATUS_DEGRADED = 'degraded'
 CHECK_STATUS_SUCCESS = 'success'
 CHECK_STATUS_FAILURE = 'failure'
-
-logger = logging.getLogger(__name__)
 
 
 async def check_connectivity(request):
@@ -57,6 +55,8 @@ async def ping(request):
 
 
 async def sentry(request):
+    logger.warning('Test logger.warning()')
+    logger.error('Test logger.error()')
     raise Exception('Test exception')
 
 

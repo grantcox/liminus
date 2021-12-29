@@ -38,6 +38,6 @@ serversTransport:
   insecureSkipVerify: true
 
 log:
-  level: DEBUG
+  level: INFO
 
 accessLog: {}

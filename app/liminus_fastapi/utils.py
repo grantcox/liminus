@@ -8,8 +8,6 @@ from datetime import timedelta
 from os import getenv
 from typing import Optional, Pattern, Union
 
-
-logger = logging.getLogger(__name__)
 compiled_path_regexes = {}
 
 

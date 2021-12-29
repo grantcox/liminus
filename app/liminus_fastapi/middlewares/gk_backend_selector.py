@@ -8,21 +8,19 @@ from starlette.responses import PlainTextResponse, Response
 
 from liminus_fastapi.backends import valid_backends
 from liminus_fastapi.base import Backend, ListenPathSettings, ReqSettings
-from liminus_fastapi.settings import config
-
-
-logger = logging.getLogger(__name__)
+from liminus_fastapi.settings import config, logger
 
 
 class GatekeeperBackendSelectorMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # go through all our backends, find the first that match this request path (no url params)
         matching_backend, listener = self._get_matching_backend_and_listener(request.url.path)
-        logger.debug(f'{self.__class__.__name__} found matching backend: {matching_backend} for request {request.url.path}')
+        logger.debug(f'req={request.scope["request_id"]} found matching backend: {matching_backend}')
 
         # if there are no matching backends, return a 404
         if not matching_backend or not listener:
-            msg = f'No matching backend found to proxy {request.url.path}' if config['DEBUG'] else ''
+            msg = f'req={request.scope["request_id"]}: No backend found to proxy {request.url.path}' \
+                if config['DEBUG'] else ''
             return PlainTextResponse(msg, HTTPStatus.NOT_FOUND)
 
         # add all relevant backend details to this request state

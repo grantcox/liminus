@@ -1,23 +1,20 @@
-import logging
-
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import Receive, Scope, Send
 
 from liminus_fastapi.base import Backend, ReqSettings
-
-
-logger = logging.getLogger(__name__)
+from liminus_fastapi.settings import logger
 
 
 class BaseGkHTTPMiddleware(BaseHTTPMiddleware):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if not self.middleware_applies_to_scope(scope):
-            logger.info(f'{self.__class__.__name__} does not apply to this request')
+            logger.debug(f'req={scope["request_id"]} GK middleware {self.__class__.__name__} does not apply')
             await self.app(scope, receive, send)
             return
 
+        logger.debug(f'req={scope["request_id"]} executing GK middleware {self.__class__.__name__}')
         await super(BaseGkHTTPMiddleware, self).__call__(scope, receive, send)
 
     def middleware_applies_to_scope(self, scope: Scope) -> bool:

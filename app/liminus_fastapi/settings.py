@@ -1,3 +1,4 @@
+import logging
 from os import getenv
 
 from liminus_fastapi.utils import get_env_var
@@ -26,14 +27,16 @@ config = {
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
-            'verbose': {
-                'format': '%(asctime)s %(levelname)s [%(name)s:%(lineno)s] '
-                '%(module)s %(process)d %(thread)d %(message)s'
+            'default': {
+                'format': '%(levelname)-6s %(asctime)s %(name)s: %(message)s'
             }
+
         },
         'handlers': {
-            'console': {'level': LOG_LEVEL, 'class': 'logging.StreamHandler'},
+            'console': {'level': LOG_LEVEL, 'class': 'logging.StreamHandler', 'formatter': 'default'},
         },
         'loggers': {'': {'level': LOG_LEVEL, 'handlers': ['console'], 'propagate': True}},
     },
+
 }
+logger = logging.getLogger('liminus')

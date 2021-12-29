@@ -6,13 +6,14 @@ from starlette.applications import Starlette
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette_early_data import EarlyDataMiddleware
-from starlette.routing import Route, Mount
+from starlette.routing import Route
 from starlette.middleware import Middleware
 
 from liminus_fastapi import health_check
 from liminus_fastapi.middlewares.add_ip_headers import AddIpHeadersMiddleware
 from liminus_fastapi.middlewares.cors import GkCorsMiddleware
 from liminus_fastapi.middlewares.gk_backend_selector import GatekeeperBackendSelectorMiddleware
+from liminus_fastapi.middlewares.request_logging import RequestLoggingMiddleware
 from liminus_fastapi.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus_fastapi.proxy_request import proxy_request_to_backend
 from liminus_fastapi.settings import config
@@ -33,6 +34,7 @@ def create_app():
     ]
 
     middlewares = [
+        Middleware(RequestLoggingMiddleware),
         Middleware(SentryAsgiMiddleware),
         Middleware(GZipMiddleware),
         Middleware(EarlyDataMiddleware, deny_all=True),
@@ -53,6 +55,12 @@ def create_app():
 
 
 def configure_logging():
+    # all existing loggers should use our root logging config
+    # otherwise we get duplicate uvicorn.error logs
+    for name in logging.root.manager.loggerDict.keys():
+        logging.getLogger(name).handlers = []
+        logging.getLogger(name).propagate = True
+
     # python warnings should be logged
     logging.captureWarnings(True)
     logging.config.dictConfig(config['LOGGING_CONFIG'])
