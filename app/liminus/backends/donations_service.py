@@ -1,4 +1,4 @@
-from liminus_fastapi.base import (
+from liminus.base import (
     Backend,
     CorsSettings,
     CsrfSettings,
@@ -6,11 +6,11 @@ from liminus_fastapi.base import (
     ListenPathSettings,
     RouteSettings,
 )
-from liminus_fastapi.constants import Headers, HttpMethods
-from liminus_fastapi.middlewares.add_ip_headers import AddIpHeadersMiddleware
-from liminus_fastapi.middlewares.restrict_headers import RestrictHeadersMiddleware
-from liminus_fastapi.settings import config
-from liminus_fastapi.utils import get_env_var
+from liminus.constants import Headers, HttpMethods
+from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
+from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
+from liminus.settings import config
+from liminus.utils import get_env_var
 
 
 service_name = 'donations'

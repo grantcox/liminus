@@ -1,5 +1,5 @@
 # flake8: noqa F401
-from liminus_fastapi.base.backend import (
+from liminus.base.backend import (
     Backend,
     CorsSettings,
     CsrfSettings,
@@ -8,4 +8,4 @@ from liminus_fastapi.base.backend import (
     ReqSettings,
     RouteSettings,
 )
-from liminus_fastapi.base.middleware import BaseGkHTTPMiddleware
+from liminus.base.middleware import BaseGkHTTPMiddleware

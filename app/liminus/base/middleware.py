@@ -3,8 +3,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import Receive, Scope, Send
 
-from liminus_fastapi.base import Backend, ReqSettings
-from liminus_fastapi.settings import logger
+from liminus.base import Backend, ReqSettings
+from liminus.settings import logger
 
 
 class BaseGkHTTPMiddleware(BaseHTTPMiddleware):

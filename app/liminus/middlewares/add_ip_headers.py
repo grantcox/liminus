@@ -1,8 +1,8 @@
 from starlette.requests import Request
 
-from liminus_fastapi.base import Backend, BaseGkHTTPMiddleware, ReqSettings
-from liminus_fastapi.constants import Headers
-from liminus_fastapi.utils import normalize_ip_address
+from liminus.base import Backend, BaseGkHTTPMiddleware, ReqSettings
+from liminus.constants import Headers
+from liminus.utils import normalize_ip_address
 
 
 class AddIpHeadersMiddleware(BaseGkHTTPMiddleware):

@@ -7,7 +7,7 @@ services:
     volumes:
       - ./app/:/usr/app/
     labels:
-      - "service.name=liminus_fastapi"
+      - "service.name=liminus"
       - "traefik.docker.network=traefik_default"
     command: uvicorn main:app --reload --host 0.0.0.0 --port 5000 --no-server-header --no-date-header
     ports:

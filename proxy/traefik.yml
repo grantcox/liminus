@@ -27,7 +27,7 @@ providers:
     # See stats-service for an example.
     network: traefik_default
     exposedByDefault: false
-    constraints: "Label(`service.name`, `liminus_fastapi`)"
+    constraints: "Label(`service.name`, `liminus`)"
   # This file provider is needed for Traefik to pick our custom certificate
   file:
     directory: /etc/traefik/

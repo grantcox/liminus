@@ -3,7 +3,7 @@ pytest automatically loads up this file and makes the fixtures available in all 
 """
 import pytest
 
-from liminus_fastapi.app import create_app  # noqa: E402
+from liminus.app import create_app  # noqa: E402
 
 
 app = create_app()

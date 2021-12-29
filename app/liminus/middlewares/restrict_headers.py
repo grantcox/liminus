@@ -4,7 +4,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus_fastapi.base import Backend, BaseGkHTTPMiddleware, HeadersAllowedSettings, ReqSettings
+from liminus.base import Backend, BaseGkHTTPMiddleware, HeadersAllowedSettings, ReqSettings
 
 
 class RestrictHeadersMiddleware(BaseGkHTTPMiddleware):

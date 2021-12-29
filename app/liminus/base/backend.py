@@ -2,9 +2,9 @@ from typing import Any, List, Optional, Type
 
 from pydantic import BaseModel
 
-from liminus_fastapi.constants import Headers, HttpMethods
-from liminus_fastapi.settings import config
-from liminus_fastapi.utils import path_matches, strip_path_prefix
+from liminus.constants import Headers, HttpMethods
+from liminus.settings import config
+from liminus.utils import path_matches, strip_path_prefix
 
 
 class CorsSettings(BaseModel):

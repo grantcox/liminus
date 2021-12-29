@@ -10,10 +10,10 @@ services:
     command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.liminus_fastapi.tls=true"
-      - "traefik.http.routers.liminus_fastapi.rule=HostRegexp(`{var:.*}`)"
-      - "traefik.http.services.liminus_fastapi.loadbalancer.server.port=5000"
-      - "traefik.http.services.liminus_fastapi.loadbalancer.server.scheme=http"
+      - "traefik.http.routers.liminus.tls=true"
+      - "traefik.http.routers.liminus.rule=HostRegexp(`{var:.*}`)"
+      - "traefik.http.services.liminus.loadbalancer.server.port=5000"
+      - "traefik.http.services.liminus.loadbalancer.server.scheme=http"
 
 networks:
   internal:

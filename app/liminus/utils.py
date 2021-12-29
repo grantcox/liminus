@@ -1,12 +1,12 @@
 import binascii
 import ipaddress
-import logging
 import math
 import re
 import socket
 from datetime import timedelta
 from os import getenv
 from typing import Optional, Pattern, Union
+
 
 compiled_path_regexes = {}
 

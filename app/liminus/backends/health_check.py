@@ -1,4 +1,4 @@
-from liminus_fastapi.base import Backend, ListenPathSettings
+from liminus.base import Backend, ListenPathSettings
 
 
 health_check_backend = Backend(

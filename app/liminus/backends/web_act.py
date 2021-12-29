@@ -1,9 +1,9 @@
-from liminus_fastapi.base import Backend, CorsSettings, CsrfSettings, HeadersAllowedSettings, ListenPathSettings
-from liminus_fastapi.constants import Headers
-from liminus_fastapi.middlewares.add_ip_headers import AddIpHeadersMiddleware
-from liminus_fastapi.middlewares.restrict_headers import RestrictHeadersMiddleware
-from liminus_fastapi.settings import config
-from liminus_fastapi.utils import get_env_var
+from liminus.base import Backend, CorsSettings, CsrfSettings, HeadersAllowedSettings, ListenPathSettings
+from liminus.constants import Headers
+from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
+from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
+from liminus.settings import config
+from liminus.utils import get_env_var
 
 
 service_name = 'web-act'

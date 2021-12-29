@@ -1,7 +1,7 @@
 import logging
 from os import getenv
 
-from liminus_fastapi.utils import get_env_var
+from liminus.utils import get_env_var
 
 
 LOG_LEVEL = get_env_var('LOG_LEVEL', default='INFO').upper()
@@ -26,17 +26,11 @@ config = {
     'LOGGING_CONFIG': {
         'version': 1,
         'disable_existing_loggers': False,
-        'formatters': {
-            'default': {
-                'format': '%(levelname)-6s %(asctime)s %(name)s: %(message)s'
-            }
-
-        },
+        'formatters': {'default': {'format': '%(levelname)-6s %(asctime)s %(name)s: %(message)s'}},
         'handlers': {
             'console': {'level': LOG_LEVEL, 'class': 'logging.StreamHandler', 'formatter': 'default'},
         },
         'loggers': {'': {'level': LOG_LEVEL, 'handlers': ['console'], 'propagate': True}},
     },
-
 }
 logger = logging.getLogger('liminus')

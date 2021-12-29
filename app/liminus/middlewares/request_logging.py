@@ -1,8 +1,9 @@
 from secrets import token_hex
 from timeit import default_timer as timer
+
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from liminus_fastapi.settings import logger
+from liminus.settings import logger
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):

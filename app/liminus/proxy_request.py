@@ -1,4 +1,3 @@
-import logging
 from json import JSONDecodeError
 from typing import Dict
 
@@ -6,8 +5,8 @@ import httpx
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus_fastapi.base import ListenPathSettings, ReqSettings
-from liminus_fastapi.settings import logger
+from liminus.base import ListenPathSettings, ReqSettings
+from liminus.settings import logger
 
 
 async def proxy_request_to_backend(request: Request) -> Response:
@@ -17,8 +16,10 @@ async def proxy_request_to_backend(request: Request) -> Response:
     async with httpx.AsyncClient() as client:
         upstream_request = client.build_request(**upstream_request_params)
         upstream_response = await client.send(upstream_request, follow_redirects=False)
-        logger.debug(f'req={request.scope["request_id"]} upstream responded with '
-                     f'HTTP {upstream_response.status_code} after {upstream_response.elapsed}')
+        logger.debug(
+            f'req={request.scope["request_id"]} upstream responded with '
+            f'HTTP {upstream_response.status_code} after {upstream_response.elapsed}'
+        )
 
         # starlette.Response constructor expect a dict for headers
         # but our httpx.Response has a multi-dict, eg supporting multiple items with the same key

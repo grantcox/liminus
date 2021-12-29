@@ -66,7 +66,7 @@ To debug the application using VSCode, create a launch configuration ("Run -> Op
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Gatekeeper FastAPI",
+            "name": "Liminus",
             "type": "python",
             "request": "launch",
             "module": "uvicorn",

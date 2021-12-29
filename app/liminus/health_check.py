@@ -6,9 +6,9 @@ import httpx
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.routing import Route
 
-from liminus_fastapi.backends import valid_backends
-from liminus_fastapi.settings import config, logger
-from liminus_fastapi.utils import loggable_string, loggable_url
+from liminus.backends import valid_backends
+from liminus.settings import config, logger
+from liminus.utils import loggable_string, loggable_url
 
 
 SUMMARY_STATUS_PERFECT = 'perfect'
@@ -65,10 +65,10 @@ def _render_html_results(results):
     return f'''
         <html>
             <head>
-                <title>Gatekeeper FastAPI Health: {results['summary']}</title>
+                <title>Liminus Health: {results['summary']}</title>
             </head>
             <body>
-                <h2 style='background-color:{heading_color}'>Gatekeeper FastAPI Health Check: {results['summary']}</h2>
+                <h2 style='background-color:{heading_color}'>Liminus Health Check: {results['summary']}</h2>
                 <h4>Enabled backends: {config['ENABLED_BACKENDS']}</h4>
                 <pre>{html.escape(json.dumps(results['checks'], indent=4))}</pre>
             </body>
