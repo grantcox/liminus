@@ -1,11 +1,10 @@
 import html
 import json
 import logging
-from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Header
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from starlette.routing import Route
 
 from liminus_fastapi.backends import valid_backends
 from liminus_fastapi.settings import config
@@ -18,12 +17,9 @@ CHECK_STATUS_SUCCESS = 'success'
 CHECK_STATUS_FAILURE = 'failure'
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix='/health')
 
 
-@router.get('')
-@router.get('/')
-async def check_connectivity(accept: Optional[str] = Header(None)):
+async def check_connectivity(request):
     checks = [
         {'name': 'sentry_http', 'status': await get_http_connection_status(config['SENTRY_DSN'])},
     ]
@@ -49,20 +45,18 @@ async def check_connectivity(accept: Optional[str] = Header(None)):
     results = {'checks': checks, 'summary': summary}
 
     # return HTML for browser requests, return JSON for automated
-    if 'text/html' in (accept or ''):
+    if 'text/html' in request.headers.get('accept', ''):
         html = _render_html_results(results)
         return HTMLResponse(html)
 
     return JSONResponse(results)
 
 
-@router.get('/ping')
-async def ping():
+async def ping(request):
     return PlainTextResponse('pong')
 
 
-@router.get('/sentry')
-async def sentry():
+async def sentry(request):
     raise Exception('Test exception')
 
 
@@ -100,3 +94,10 @@ async def get_http_connection_status(url) -> str:
         logging.exception('HTTP GET request failed')
 
         return str(exc)
+
+
+routes = [
+    Route('/health', check_connectivity, methods=['GET']),
+    Route('/health/ping', ping, methods=['GET']),
+    Route('/health/sentry', sentry, methods=['GET']),
+]

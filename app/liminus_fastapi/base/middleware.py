@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class BaseGkHTTPMiddleware(BaseHTTPMiddleware):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if not self.middleware_applies_to_scope(scope):
+            logger.info(f'{self.__class__.__name__} does not apply to this request')
             await self.app(scope, receive, send)
             return
 

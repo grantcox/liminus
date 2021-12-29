@@ -47,13 +47,14 @@ This will automatically setup the dependencies and run the server at https://loc
 The uWSGI server can also be accessed directly without going through Traefik. To do that you can check the port on the host with `./scripts/docker-compose-local.sh ps`. You'll see output like this:
 
 ```sh
-                Name                               Command                 State                          Ports
-------------------------------------------------------------------------------------------------------------------------------------
-local-liminus_app_1              uwsgi --ini uwsgi.ini            Up           0.0.0.0:55014->5000/tcp
+           Name                          Command               State            Ports
+----------------------------------------------------------------------------------------------
+local-liminus_app_1           uvicorn main:app --reload  ...   Up      0.0.0.0:61625->5000/tcp
 ...
 ```
 
-In this example, the uWSGI server can be accessed through port `55014`. An example URL would be http://localhost:55014/health-check/ping.
+In this example, the uvicorn server can be accessed through HTTP on port `61625`. An example URL would be http://localhost:61625/health/ping.
+Please note this must be accessed via HTTP, not HTTPS - our TLS is terminated by Traefik which this method bypasses.
 Have a look at [app/README.md](app/README.md) for service specific documentation.
 
 ### Debugging

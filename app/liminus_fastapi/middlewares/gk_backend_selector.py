@@ -18,6 +18,7 @@ class GatekeeperBackendSelectorMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # go through all our backends, find the first that match this request path (no url params)
         matching_backend, listener = self._get_matching_backend_and_listener(request.url.path)
+        logger.debug(f'{self.__class__.__name__} found matching backend: {matching_backend} for request {request.url.path}')
 
         # if there are no matching backends, return a 404
         if not matching_backend or not listener:

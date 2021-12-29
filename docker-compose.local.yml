@@ -9,7 +9,7 @@ services:
     labels:
       - "service.name=liminus_fastapi"
       - "traefik.docker.network=traefik_default"
-    command: uvicorn main:app --reload --port 5000 --no-server-header --no-date-header
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 5000 --no-server-header --no-date-header
     ports:
       - 5000
 

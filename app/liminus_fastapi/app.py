@@ -1,11 +1,13 @@
 import logging
 
 import sentry_sdk
-from fastapi import FastAPI
-from fastapi.requests import Request
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from starlette.applications import Starlette
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.requests import Request
 from starlette_early_data import EarlyDataMiddleware
+from starlette.routing import Route, Mount
+from starlette.middleware import Middleware
 
 from liminus_fastapi import health_check
 from liminus_fastapi.middlewares.add_ip_headers import AddIpHeadersMiddleware
@@ -19,33 +21,34 @@ from liminus_fastapi.settings import config
 def create_app():
     configure_logging()
 
-    app = FastAPI(
-        title='Gatekeeper FastAPI',
-    )
-    # we have to add all the possible GK middlewares
-    # they will each exit early if they're not relevant to each request
-    app.add_middleware(GkCorsMiddleware)
-    app.add_middleware(AddIpHeadersMiddleware)
-    app.add_middleware(RestrictHeadersMiddleware)
-
-    # the "backend selector" middleware must be added after all other GK middlewares
-    # so it actually executes first and sets up the request scope
-    app.add_middleware(GatekeeperBackendSelectorMiddleware)
-
-    # then add all middlewares that don't relate to specific backends
-    app.add_middleware(GZipMiddleware)
-    app.add_middleware(EarlyDataMiddleware, deny_all=True)
-    app.add_middleware(SentryAsgiMiddleware)
-
-    # the health check routes are handled directly
-    app.include_router(health_check.router)
-
-    # every other request that makes it through the middleware is proxied to the appropriate backend
-    @app.route('/{full_path:path}')
     async def catch_all(request: Request):
         response = await proxy_request_to_backend(request)
         return response
 
+    routes = [
+        # the health check routes are handled directly
+        *health_check.routes,
+        # every other request that makes it through the middleware is proxied to the appropriate backend
+        Route('/{rest_of_path:path}', catch_all),
+    ]
+
+    middlewares = [
+        Middleware(SentryAsgiMiddleware),
+        Middleware(GZipMiddleware),
+        Middleware(EarlyDataMiddleware, deny_all=True),
+
+        # the "backend selector" middleware must be added before all other GK middlewares
+        # so it sets up the request scope
+        Middleware(GatekeeperBackendSelectorMiddleware),
+
+        # we have to add all the possible GK middlewares
+        # they will each exit early if they're not relevant to each request
+        Middleware(GkCorsMiddleware),
+        Middleware(AddIpHeadersMiddleware),
+        Middleware(RestrictHeadersMiddleware),
+    ]
+
+    app = Starlette(routes=routes, middleware=middlewares)
     return app
 
 

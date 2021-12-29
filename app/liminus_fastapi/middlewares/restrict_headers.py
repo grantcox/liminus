@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from starlette.datastructures import MutableHeaders
@@ -6,9 +5,6 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from liminus_fastapi.base import Backend, BaseGkHTTPMiddleware, HeadersAllowedSettings, ReqSettings
-
-
-logger = logging.getLogger(__name__)
 
 
 class RestrictHeadersMiddleware(BaseGkHTTPMiddleware):

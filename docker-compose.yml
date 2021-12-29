@@ -7,7 +7,7 @@ services:
     networks:
       - internal
       - traefik_default
-    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --port 5000
+    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.liminus_fastapi.tls=true"

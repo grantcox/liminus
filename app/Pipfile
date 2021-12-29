@@ -4,12 +4,12 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-aioredis = "*"
-fastapi = "*"
 gunicorn = "*"
 httpx = "*"
+pydantic = "*"
 python-multipart = "*"
 sentry-sdk = "*"
+starlette = "*"
 starlette_early_data = "*"
 uvicorn = "*"
 
