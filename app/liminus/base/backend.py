@@ -23,6 +23,11 @@ class CorsSettings(BaseModel):
     cors_middleware_instance: Optional[Any] = None
 
 
+class AuthSettings(BaseModel):
+    requires_staff_auth: bool = False
+    requires_member_auth: bool = False
+
+
 class HeadersAllowedSettings(BaseModel):
     allowlist: List[str] = ['*']
     blocklist: List[str] = []
@@ -42,6 +47,7 @@ class CsrfSettings(BaseModel):
 class ReqSettings(BaseModel):
     CSRF: Optional[CsrfSettings] = None
     CORS: Optional[CorsSettings] = None
+    auth: Optional[AuthSettings] = None
     allowed_request_headers: Optional[HeadersAllowedSettings] = None
     allowed_response_headers: Optional[HeadersAllowedSettings] = None
     middlewares: Optional[List[Type]] = None
@@ -85,9 +91,11 @@ class Backend(ReqSettings):
 
     CORS: CorsSettings = CorsSettings()
     CSRF: CsrfSettings = CsrfSettings()
+    auth: AuthSettings = AuthSettings()
     allowed_request_headers: HeadersAllowedSettings = HeadersAllowedSettings(allowlist=Headers.REQUEST_DEFAULT_ALLOW)
     allowed_response_headers: HeadersAllowedSettings = HeadersAllowedSettings(blocklist=Headers.RESPONSE_DEFAULT_BLOCK)
     middlewares: List[Type] = []
+    timeout: int = 10
 
     def __str__(self):
         return f'<Backend "{self.name}">'

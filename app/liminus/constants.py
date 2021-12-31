@@ -17,6 +17,7 @@ class Headers:
         'host',
         'referer',
         'user-agent',
+        'x-requested-with',
     ]
     RESPONSE_DEFAULT_BLOCK = [
         'member-authentication-jwt',

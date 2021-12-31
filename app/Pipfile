@@ -1,9 +1,10 @@
 [[source]]
 name = "pypi"
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
 
 [packages]
+aioredis = "*"
 gunicorn = "*"
 httpx = "*"
 pydantic = "*"
@@ -24,7 +25,7 @@ pytest = "*"
 safety = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
 
 [pipenv]
 allow_prereleases = false

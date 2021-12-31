@@ -1,4 +1,5 @@
 import binascii
+import hashlib
 import ipaddress
 import math
 import re
@@ -127,3 +128,9 @@ def loggable_string(val: str, maxlen: int = 0, head: int = 0, tail: int = 0, des
 
 def loggable_url(url):
     return re.sub(r'//.*@', '//<redacted>@', url)
+
+
+def get_cache_hash_key(key_prefix: str, generate_hash_on: str) -> str:
+    hash_data_bytes = bytes(f'{generate_hash_on}', 'utf-8')
+    hash = hashlib.sha256(hash_data_bytes).hexdigest()
+    return f'{key_prefix}{hash}'

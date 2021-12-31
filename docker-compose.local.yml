@@ -4,6 +4,8 @@ services:
   app:
     build:
       context: "./app"
+      args:
+        BUILD_DEV: 1
     volumes:
       - ./app/:/usr/app/
     labels:
@@ -12,8 +14,10 @@ services:
     command: uvicorn main:app --reload --host 0.0.0.0 --port 5000 --no-server-header --no-date-header
     ports:
       - 5000
+    networks:
+      - intra_service_network
 
-  proxy:
+  traefik:
     image: traefik:latest
     ports:
       - 8078:443
@@ -22,8 +26,18 @@ services:
       - app
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./proxy/traefik.yml:/etc/traefik/traefik.yml
-      - ./proxy/certs/local-liminus.crt:/etc/ssl/certs/public.crt
-      - ./proxy/certs/local-liminus.key:/etc/ssl/private/private.key
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/certs/local-liminus.crt:/etc/ssl/certs/public.crt
+      - ./traefik/certs/local-liminus.key:/etc/ssl/private/private.key
     networks:
       - traefik_default
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    networks:
+      - internal
+
+networks:
+  intra_service_network:
+    external: true

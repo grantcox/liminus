@@ -1,6 +1,8 @@
 from liminus.base import Backend, CorsSettings, CsrfSettings, HeadersAllowedSettings, ListenPathSettings
 from liminus.constants import Headers
 from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
+from liminus.middlewares.cors import GkCorsMiddleware
+from liminus.middlewares.public_session_csrf_jwt import PublicSessionMiddleware
 from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus.settings import config
 from liminus.utils import get_env_var
@@ -32,5 +34,5 @@ if service_name in config['ENABLED_BACKENDS']:
                 'cf-ipcountry',
             ]
         ),
-        middlewares=[RestrictHeadersMiddleware, AddIpHeadersMiddleware],
+        middlewares=[RestrictHeadersMiddleware, AddIpHeadersMiddleware, PublicSessionMiddleware, GkCorsMiddleware],
     )

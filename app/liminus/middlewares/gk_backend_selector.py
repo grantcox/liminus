@@ -14,12 +14,12 @@ class GatekeeperBackendSelectorMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # go through all our backends, find the first that match this request path (no url params)
         matching_backend, listener = self._get_matching_backend_and_listener(request.url.path)
-        logger.debug(f'req={request.scope["request_id"]} found matching backend: {matching_backend}')
+        logger.debug(f'{request} found matching backend: {matching_backend}')
 
         # if there are no matching backends, return a 404
         if not matching_backend or not listener:
             msg = (
-                f'req={request.scope["request_id"]}: No backend found to proxy {request.url.path}'
+                f'{request}: No backend found to proxy {request.url.path}'
                 if config['DEBUG']
                 else ''
             )

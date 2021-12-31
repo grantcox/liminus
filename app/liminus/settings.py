@@ -1,7 +1,7 @@
 import logging
 from os import getenv
 
-from liminus.utils import get_env_var
+from liminus.utils import get_env_var, to_seconds
 
 
 LOG_LEVEL = get_env_var('LOG_LEVEL', default='INFO').upper()
@@ -11,7 +11,7 @@ config = {
     ########################################################################################
     # General settings
     ########################################################################################
-    'ENABLED_BACKENDS': get_env_var('ENABLED_BACKENDS').split(','),
+    'ENABLED_BACKENDS': [be.strip() for be in get_env_var('ENABLED_BACKENDS').split(',')],
     ########################################################################################
     # CORS settings
     ########################################################################################
@@ -19,7 +19,38 @@ config = {
     ########################################################################################
     # sentry settings
     ########################################################################################
-    'SENTRY_DSN': getenv('SENTRY_DSN'),
+    'SENTRY_DSN': get_env_var('SENTRY_DSN'),
+    'REDIS_DSN': get_env_var('REDIS_DSN', ''),
+    ########################################################################################
+    # Staff session settings
+    ########################################################################################
+    'STAFF_SESSION_COOKIE_NAME': get_env_var('STAFF_SESSION_COOKIE_NAME'),
+    'STAFF_SESSION_COOKIE_DOMAIN': get_env_var('STAFF_SESSION_COOKIE_DOMAIN'),
+    'STAFF_SESSION_IDLE_TIMEOUT_SECONDS': to_seconds(minutes=30),
+    'STAFF_SESSION_STRICT_MAX_LIFETIME_SECONDS': to_seconds(hours=12),
+    'STAFF_AUTH_INIT_REDIRECT_LOGIN_URL': (
+        get_env_var('BASEURL_FOR_SAML_REDIRECT') + '/auth-service/staff/saml/init'
+    ),
+    ########################################################################################
+    # Staff auth JWT verification / refreshing
+    ########################################################################################
+    'STAFF_AUTH_JWKS_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/jwks',
+    'STAFF_AUTH_JWT_REFRESH_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/internal/staff/jwt/refresh',
+    'STAFF_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS': to_seconds(minutes=30),
+    ########################################################################################
+    # Public / member session settings
+    ########################################################################################
+    'PUBLIC_SESSION_COOKIE_NAME': get_env_var('PUBLIC_SESSION_COOKIE_NAME'),
+    'PUBLIC_CSRF_HEADER_NAME': 'Avaaz-Gk-Public-Csrf-Token',
+    'PUBLIC_COOKIES_DOMAIN': get_env_var('PUBLIC_COOKIES_DOMAIN'),
+    'PUBLIC_SESSION_IDLE_TIMEOUT_SECONDS': to_seconds(minutes=30),
+    'PUBLIC_SESSION_STRICT_MAX_LIFETIME_SECONDS': to_seconds(hours=24),
+    ########################################################################################
+    # Member auth JWT verification / refreshing
+    ########################################################################################
+    'MEMBER_AUTH_JWKS_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN', '') + '/jwks',
+    'MEMBER_AUTH_JWT_REFRESH_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN', '') + '/internal/members/jwt/refresh',
+    'MEMBER_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS': to_seconds(minutes=30),
     ########################################################################################
     # logging settings
     ########################################################################################

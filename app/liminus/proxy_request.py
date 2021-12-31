@@ -4,6 +4,7 @@ from typing import Dict
 import httpx
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.datastructures import FormData, UploadFile
 
 from liminus.base import ListenPathSettings, ReqSettings
 from liminus.settings import logger
@@ -11,15 +12,13 @@ from liminus.settings import logger
 
 async def proxy_request_to_backend(request: Request) -> Response:
     upstream_request_params = await construct_upstream_request_params(request)
-    logger.debug(f'req={request.scope["request_id"]} proxying to {upstream_request_params["url"]}')
+    logger.debug(f'{request} proxying to {upstream_request_params["url"]}')
 
     async with httpx.AsyncClient() as client:
         upstream_request = client.build_request(**upstream_request_params)
         upstream_response = await client.send(upstream_request, follow_redirects=False)
-        logger.debug(
-            f'req={request.scope["request_id"]} upstream responded with '
-            f'HTTP {upstream_response.status_code} after {upstream_response.elapsed}'
-        )
+        logger.debug(f'{request} upstream responded with HTTP {upstream_response.status_code} '
+                     f'after {upstream_response.elapsed}')
 
         # starlette.Response constructor expect a dict for headers
         # but our httpx.Response has a multi-dict, eg supporting multiple items with the same key
@@ -74,7 +73,16 @@ async def construct_upstream_request_params(request: Request) -> Dict:
             except JSONDecodeError:
                 # it's not json, try normal form data
                 form_data = await request.form()
-                upstream_request_params['data'] = form_data
-                # TODO: extract any files into upstream_request_params['files']
+
+                # httpx data should be a dict
+                httpx_data = {}
+                for key, value in form_data.multi_items():
+                    if isinstance(value, UploadFile):
+                        # TODO: extract any files into upstream_request_params['files']
+                        continue
+                    httpx_data[key] = value
+                    # TODO: support the case of having duplicate keys
+
+                upstream_request_params['data'] = httpx_data
 
     return upstream_request_params
