@@ -2,13 +2,13 @@ from http import HTTPStatus
 from secrets import token_urlsafe
 
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
-from liminus.base import ReqSettings
+from liminus.base.backend import ReqSettings
 from liminus.errors import ErrorResponse
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
-from liminus.utils import get_cache_hash_key
 from liminus.settings import logger
+from liminus.utils import get_cache_hash_key
 
 
 class CsrfHandlerMixin(RedisHandlerMixin):
@@ -17,7 +17,9 @@ class CsrfHandlerMixin(RedisHandlerMixin):
     # allow a CSRF to be used more than once, during this very-short TTL
     CSRF_REUSE_GRACE_TTL_SECONDS = 3
 
-    async def _rotate_csrf_if_needed(self, request: Request, response: Response, session_id: str, force_refresh: bool = False):
+    async def _rotate_csrf_if_needed(
+        self, request: Request, response: Response, session_id: str, force_refresh: bool = False
+    ):
         rotate_csrf = getattr(request.state, 'rotate_csrf', None) is not None
         if rotate_csrf or force_refresh:
             # generate a new CSRF token, add it to a custom response header
@@ -100,12 +102,12 @@ class CsrfHandlerMixin(RedisHandlerMixin):
     async def _fail_with_csrf_token_error(self, request: Request, session_id: str):
         logger.info(f'{request} does not have expected CSRF token')
 
+        # if we're failing due to an invalid CSRF token, we should also give them a new one
+        csrf_token = await self._add_new_csrf(session_id)
         error_response = JSONResponse(
             {'error': 'Invalid CSRF Token'},
             status_code=HTTPStatus.UNAUTHORIZED,
+            headers={self.CSRF_HEADER_NAME: csrf_token},
         )
-        # if we're failing due to an invalid CSRF token, we should also give them a new one
-        csrf_token = await self._add_new_csrf(session_id)
-        error_response.headers[self.CSRF_HEADER_NAME] = csrf_token
 
         raise ErrorResponse(error_response)

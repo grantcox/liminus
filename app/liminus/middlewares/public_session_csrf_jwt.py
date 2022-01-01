@@ -1,13 +1,14 @@
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus.base import Backend, BaseGkHTTPMiddleware, ReqSettings
+from liminus.base.backend import Backend, ReqSettings
+from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.csrf_mixin import CsrfHandlerMixin
 from liminus.middlewares.mixins.jwt_mixin import JwtHandlerMixin
 from liminus.settings import config
 
 
-class PublicSessionMiddleware(BaseGkHTTPMiddleware, CsrfHandlerMixin, JwtHandlerMixin):
+class PublicSessionMiddleware(GkRequestMiddleware, CsrfHandlerMixin, JwtHandlerMixin):
     """
     This handler manages three functions regarding members on our public site:
      - Ensuring all public site visitors have a session, and CSRF token
@@ -26,7 +27,7 @@ class PublicSessionMiddleware(BaseGkHTTPMiddleware, CsrfHandlerMixin, JwtHandler
     # allow a CSRF to be used more than once, during this very-short TTL
     CSRF_REUSE_GRACE_TTL_SECONDS = 3
 
-    AUTH_JWT_HEADER = 'Avaaz-Member-Authentication-Jwt'
+    AUTH_JWT_HEADER = 'Member-Authentication-Jwt'
     JWKS_URL = config['MEMBER_AUTH_JWKS_URL']
     REFRESH_JWT_URL = config['MEMBER_AUTH_JWT_REFRESH_URL']
     REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS = config['MEMBER_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS']

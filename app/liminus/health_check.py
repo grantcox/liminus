@@ -23,19 +23,18 @@ async def check_connectivity(request):
     ]
     # go through each backend and check their upstream dsns
     for be in valid_backends:
-        for listen_path in be.listen:
-            if not listen_path.upstream_dsn:
-                continue
+        if not be.listen.upstream_dsn:
+            continue
 
-            upstream_dsn_ping = listen_path.upstream_dsn.rstrip('/') + '/ping'
-            listen_path_label = listen_path.prefix or listen_path.prefix_regex
+        upstream_dsn_ping = be.listen.upstream_dsn.rstrip('/') + '/ping'
+        listen_path_label = be.listen.prefix or be.listen.path_regex
 
-            checks.append(
-                {
-                    'name': f'{be.name} {listen_path_label} upstream_dsn',
-                    'status': await get_http_connection_status(upstream_dsn_ping),
-                }
-            )
+        checks.append(
+            {
+                'name': f'{be.name} {listen_path_label} upstream_dsn',
+                'status': await get_http_connection_status(upstream_dsn_ping),
+            }
+        )
 
     passing_checks = [check['status'] == CHECK_STATUS_SUCCESS for check in checks]
     summary = SUMMARY_STATUS_PERFECT if all(passing_checks) else SUMMARY_STATUS_DEGRADED

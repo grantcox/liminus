@@ -1,26 +1,13 @@
-from typing import Any, List, Optional, Type
+import re
+from typing import Any, List, Optional, Pattern, Set, Type
 
 from pydantic import BaseModel
 
 from liminus.constants import Headers, HttpMethods
-from liminus.settings import config
-from liminus.utils import path_matches, strip_path_prefix
+from liminus.utils import strip_path_prefix
 
 
-class CorsSettings(BaseModel):
-    # these settings will be passed directly to Starlette CorsMiddleware
-    enable: bool = False
-    allow_origins: List[str] = []
-    allow_origin_regex: Optional[str] = config['APIS_CORS_ALLOWED_ORIGINS_REGEX'] or None
-    allow_methods: List[str] = ['*']
-    allow_headers: List[str] = ['*']
-    expose_headers: List[str] = []
-    allow_credentials: bool = False
-    max_age: int = 600
-
-    # we need to construct a Starlette CORSMiddleware instance for each set of settings
-    # so we will create one instance per model instance
-    cors_middleware_instance: Optional[Any] = None
+_middleware_instances = {}
 
 
 class AuthSettings(BaseModel):
@@ -29,8 +16,8 @@ class AuthSettings(BaseModel):
 
 
 class HeadersAllowedSettings(BaseModel):
-    allowlist: List[str] = ['*']
-    blocklist: List[str] = []
+    allowlist: Set[str] = set(['*'])
+    blocklist: Set[str] = set()
 
 
 class CsrfSettings(BaseModel):
@@ -46,7 +33,6 @@ class CsrfSettings(BaseModel):
 
 class ReqSettings(BaseModel):
     CSRF: Optional[CsrfSettings] = None
-    CORS: Optional[CorsSettings] = None
     auth: Optional[AuthSettings] = None
     allowed_request_headers: Optional[HeadersAllowedSettings] = None
     allowed_response_headers: Optional[HeadersAllowedSettings] = None
@@ -56,46 +42,94 @@ class ReqSettings(BaseModel):
 
 class ListenPathSettings(ReqSettings):
     prefix: Optional[str] = None
-    prefix_regex: Optional[str] = None
+    path_regex: Optional[Pattern] = None
     upstream_dsn: str = ''
     strip_prefix: bool = True
 
     def matches_path(self, request_path: str) -> bool:
-        return path_matches(request_path, self.prefix, self.prefix_regex, match_prefix=True)
+        if self.prefix and request_path.startswith(self.prefix):
+            return True
+
+        if self.path_regex and self.path_regex.match(request_path):
+            return True
+
+        return False
 
     def get_upstream_url(self, request_path: str) -> str:
         upstream_path = request_path
         if self.strip_prefix:
-            upstream_path = strip_path_prefix(request_path, self.prefix, self.prefix_regex)
+            upstream_path = strip_path_prefix(request_path, self.prefix, self.path_regex)
         return self.upstream_dsn.rstrip('/') + '/' + upstream_path.lstrip('/')
 
 
 class RouteSettings(ReqSettings):
     path: Optional[str] = None
-    path_regex: Optional[str] = None
-    allow_methods: List[str] = [HttpMethods.ALL]
+    path_regex: Optional[Pattern] = None
+    allow_methods: Set[str] = {HttpMethods.ALL}
 
-    def path_exactly_matches(self, request_path: str) -> bool:
-        if self.path and self.path == request_path:
+    def route_exactly_matches(self, request_path: str, request_method: str) -> bool:
+        if not self.method_matches(request_method):
+            return False
+
+        return self.path == request_path
+
+    def route_matches(self, request_path: str, request_method: str) -> bool:
+        if not self.method_matches(request_method):
+            return False
+
+        if self.path == request_path:
             return True
+
+        if self.path_regex and self.path_regex.match(request_path):
+            return True
+
         return False
 
-    def path_matches(self, request_path: str) -> bool:
-        return path_matches(request_path, self.path, self.path_regex)
+    def method_matches(self, request_method: str) -> bool:
+        if HttpMethods.ALL in self.allow_methods:
+            return True
+        if request_method in self.allow_methods:
+            return True
+        return False
 
 
 class Backend(ReqSettings):
     name: str
-    listen: List[ListenPathSettings] = []
-    routes: List[RouteSettings] = [RouteSettings(path_regex='.*')]
+    listen: ListenPathSettings = ListenPathSettings()
+    routes: List[RouteSettings] = [RouteSettings(path_regex=re.compile('.*'))]
 
-    CORS: CorsSettings = CorsSettings()
     CSRF: CsrfSettings = CsrfSettings()
     auth: AuthSettings = AuthSettings()
     allowed_request_headers: HeadersAllowedSettings = HeadersAllowedSettings(allowlist=Headers.REQUEST_DEFAULT_ALLOW)
     allowed_response_headers: HeadersAllowedSettings = HeadersAllowedSettings(blocklist=Headers.RESPONSE_DEFAULT_BLOCK)
     middlewares: List[Type] = []
+    middleware_instances: List[Any] = []
     timeout: int = 10
 
     def __str__(self):
         return f'<Backend "{self.name}">'
+
+    def __init__(__pydantic_self__, **data: Any) -> None:
+        super().__init__(**data)
+        __pydantic_self__._compile_settings()
+
+    def _compile_settings(self):
+        # coalesce all the ReqSettings into explicit / complete objects on each route
+        # so we don't have to do it for every separate request
+        self._coalesce_settings(self.listen, self)
+
+        for route in self.routes:
+            self._coalesce_settings(route, self.listen, self)
+
+        # create instances for all the middleware classes
+        for mw_class in self.middlewares:
+            if mw_class.__name__ not in _middleware_instances:
+                _middleware_instances[mw_class.__name__] = mw_class()
+
+            self.middleware_instances.append(_middleware_instances[mw_class.__name__])
+
+    def _coalesce_settings(self, into: ReqSettings, *args):
+        for setting_source in args:
+            for prop in ReqSettings().dict():
+                if getattr(into, prop) is None:
+                    setattr(into, prop, getattr(setting_source, prop))

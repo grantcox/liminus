@@ -1,9 +1,9 @@
+import json
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
-import json
 from secrets import token_urlsafe
 from time import time
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -54,9 +54,12 @@ class SessionHandlerMixin(RedisHandlerMixin):
 
         return Session(session_id, session_data)
 
-    async def _store_session(self, session_id: Union[str, Session], session_data: Optional[dict] = None):
-        if isinstance(session_id, Session):
-            session_id, session_data = session_id.session_id, session_id.session_data
+    async def _store_session(self, *args):
+        if isinstance(args[0], Session):
+            session_id, session_data = args[0].session_id, args[0].session_data
+        else:
+            session_id, session_data = args[0], args[1]
+
         await self._store_session_in_cache(session_id, self.SESSION_IDLE_TIMEOUT_SECONDS, session_data)
 
     def _get_session_id(self, request):
@@ -118,7 +121,7 @@ class SessionHandlerMixin(RedisHandlerMixin):
         if not cookie_header_value:
             return {}
 
-        cookie = SimpleCookie()
+        cookie: SimpleCookie = SimpleCookie()
         cookie.load(cookie_header_value)
 
         cookies = {key: morsel.value for key, morsel in cookie.items()}

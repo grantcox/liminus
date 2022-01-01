@@ -1,14 +1,14 @@
 from time import time
 from typing import Optional
+
+import httpx
+from liminus_auth import UnauthenticatedException, validate_jwt
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus_auth import UnauthenticatedException, validate_jwt
-import httpx
-
-from liminus.middlewares.mixins.session_mixin import SessionHandlerMixin, Session
-from liminus.utils import get_cache_hash_key, to_seconds
+from liminus.middlewares.mixins.session_mixin import Session, SessionHandlerMixin
 from liminus.settings import logger
+from liminus.utils import get_cache_hash_key, to_seconds
 
 
 class JwtHandlerMixin(SessionHandlerMixin):
@@ -44,7 +44,7 @@ class JwtHandlerMixin(SessionHandlerMixin):
 
         stored_jwt = valid_jwt = session.session_data['jwt']
         try:
-            payload = validate_jwt(stored_jwt, self.JWKS_URL)
+            payload = validate_jwt(stored_jwt, self.JWKS_URL) or {}
             expiration_time = payload['exp']
             remaining_time = expiration_time - time()
 
@@ -69,7 +69,7 @@ class JwtHandlerMixin(SessionHandlerMixin):
         if valid_jwt:
             # append the JWT to the backing service request
             request.state.headers[self.AUTH_JWT_HEADER] = valid_jwt
-            logger.info('{request} is for authenticated user, adding JWT header')
+            logger.info(f'{request} is for authenticated user, adding {self.AUTH_JWT_HEADER} header')
             return valid_jwt
 
         return None

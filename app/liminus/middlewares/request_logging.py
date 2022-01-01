@@ -9,7 +9,7 @@ from liminus.settings import logger
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start = timer()
-        logger.debug(f'{request} start proxying {request.url.path}')
+        logger.debug(f'{request} start proxying {request.method} {request.url.path}')
 
         response = await call_next(request)
 

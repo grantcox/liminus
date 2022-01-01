@@ -5,19 +5,15 @@ import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.routing import Route
 from starlette_early_data import EarlyDataMiddleware
 
 from liminus import health_check
-from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
-from liminus.middlewares.cors import GkCorsMiddleware
-from liminus.middlewares.gk_backend_selector import GatekeeperBackendSelectorMiddleware
-from liminus.middlewares.public_session_csrf_jwt import PublicSessionMiddleware
+from liminus.middleware_runner import GatekeeperMiddlewareRunner
 from liminus.middlewares.request_logging import RequestLoggingMiddleware
-from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
-from liminus.middlewares.staff_auth_session import StaffAuthSessionMiddleware
 from liminus.proxy_request import proxy_request_to_backend
 from liminus.settings import config
 
@@ -34,24 +30,16 @@ def create_app():
         # the health check routes are handled directly
         *health_check.routes,
         # every other request that makes it through the middleware is proxied to the appropriate backend
-        Route('/{rest_of_path:path}', catch_all, methods=["GET", "POST"]),
+        Route('/{rest_of_path:path}', catch_all, methods=['GET', 'POST']),
     ]
 
     middlewares = [
         Middleware(RequestLoggingMiddleware),
         Middleware(SentryAsgiMiddleware),
         Middleware(GZipMiddleware),
+        Middleware(CORSMiddleware, **config['CORSMiddleware_args']),
         Middleware(EarlyDataMiddleware, deny_all=True),
-        # the "backend selector" middleware must be added before all other GK middlewares
-        # so it sets up the request scope
-        Middleware(GatekeeperBackendSelectorMiddleware),
-        # we have to add all the possible GK middlewares
-        # they will each exit early if they're not relevant to each request
-        Middleware(GkCorsMiddleware),
-        Middleware(AddIpHeadersMiddleware),
-        Middleware(RestrictHeadersMiddleware),
-        Middleware(PublicSessionMiddleware),
-        Middleware(StaffAuthSessionMiddleware),
+        Middleware(GatekeeperMiddlewareRunner),
     ]
 
     app = Starlette(routes=routes, middleware=middlewares)

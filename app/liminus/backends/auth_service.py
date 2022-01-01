@@ -1,4 +1,4 @@
-from liminus.base import Backend, ListenPathSettings
+from liminus.base.backend import Backend, ListenPathSettings
 from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
 from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus.middlewares.staff_auth_session import StaffAuthSessionMiddleware
@@ -12,12 +12,10 @@ auth_service_backend = None
 if service_name in config['ENABLED_BACKENDS']:
     auth_service_backend = Backend(
         name=service_name,
-        listen=[
-            ListenPathSettings(
-                prefix='/auth-service/',
-                upstream_dsn=get_env_var('BACKEND_AUTH_SERVICE_DSN'),
-                strip_prefix=True,
-            ),
-        ],
-        middlewares=[RestrictHeadersMiddleware, AddIpHeadersMiddleware, StaffAuthSessionMiddleware],
+        listen=ListenPathSettings(
+            prefix='/auth-service/',
+            upstream_dsn=get_env_var('BACKEND_AUTH_SERVICE_DSN'),
+            strip_prefix=True,
+        ),
+        middlewares=[StaffAuthSessionMiddleware, AddIpHeadersMiddleware, RestrictHeadersMiddleware],
     )

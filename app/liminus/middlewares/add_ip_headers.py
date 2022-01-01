@@ -1,11 +1,13 @@
 from starlette.requests import Request
 
-from liminus.base import Backend, BaseGkHTTPMiddleware, ReqSettings
+from liminus.base.backend import Backend, ReqSettings
+from liminus.base.middleware import GkRequestMiddleware
 from liminus.constants import Headers
+from liminus.settings import logger
 from liminus.utils import normalize_ip_address
 
 
-class AddIpHeadersMiddleware(BaseGkHTTPMiddleware):
+class AddIpHeadersMiddleware(GkRequestMiddleware):
     async def handle_request(self, req: Request, settings: ReqSettings, backend: Backend):
         # for geo-ip purposes we trust the x-forwarded-for
         # for security purposes we do not trust that, and we use the IP that connected to CloudFlare

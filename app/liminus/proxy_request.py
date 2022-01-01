@@ -2,11 +2,11 @@ from json import JSONDecodeError
 from typing import Dict
 
 import httpx
+from starlette.datastructures import UploadFile
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.datastructures import FormData, UploadFile
 
-from liminus.base import ListenPathSettings, ReqSettings
+from liminus.base.backend import ListenPathSettings, ReqSettings
 from liminus.settings import logger
 
 
@@ -17,8 +17,10 @@ async def proxy_request_to_backend(request: Request) -> Response:
     async with httpx.AsyncClient() as client:
         upstream_request = client.build_request(**upstream_request_params)
         upstream_response = await client.send(upstream_request, follow_redirects=False)
-        logger.debug(f'{request} upstream responded with HTTP {upstream_response.status_code} '
-                     f'after {upstream_response.elapsed}')
+        logger.debug(
+            f'{request} upstream responded with HTTP {upstream_response.status_code} '
+            f'after {upstream_response.elapsed}'
+        )
 
         # starlette.Response constructor expect a dict for headers
         # but our httpx.Response has a multi-dict, eg supporting multiple items with the same key

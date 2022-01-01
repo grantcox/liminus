@@ -8,7 +8,7 @@ class Headers:
     CLOUDFLARE_CONNECTING_IP = 'cf-connecting-ip'
     X_FORWARDED_FOR = 'x-forwarded-for'
 
-    REQUEST_DEFAULT_ALLOW = [
+    REQUEST_DEFAULT_ALLOW = {
         'accept-encoding',
         'accept',
         'accept-language',
@@ -19,13 +19,13 @@ class Headers:
         'user-agent',
         'x-requested-with',
     ]
-    RESPONSE_DEFAULT_BLOCK = [
+    RESPONSE_DEFAULT_BLOCK = {
         'member-authentication-jwt',
         'rotate-csrf',
         'staff-authentication-jwt',
         'x-powered-by',
         'server',
-    ]
+    }
 
 
 class HttpMethods:

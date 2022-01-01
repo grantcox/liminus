@@ -9,21 +9,6 @@ from os import getenv
 from typing import Optional, Pattern, Union
 
 
-compiled_path_regexes = {}
-
-
-def _get_compiled_prefix_regex(prefix_regex: str) -> Pattern:
-    # ensure this regex is "starts with"
-    if prefix_regex[0] != '^':
-        prefix_regex = '^' + prefix_regex
-
-    # keep a cache of compiled regexes
-    if prefix_regex not in compiled_path_regexes:
-        compiled_path_regexes[prefix_regex] = re.compile(prefix_regex)
-
-    return compiled_path_regexes[prefix_regex]
-
-
 def get_env_var(name: str, default: str = None):
     value = getenv(name, default)
 
@@ -37,32 +22,13 @@ def to_seconds(**kwargs):
     return int(timedelta(**kwargs).total_seconds())
 
 
-def path_matches(
-    request_path: str, path: Optional[str] = None, path_regex: Optional[str] = None, match_prefix: bool = False
-) -> bool:
-    if path is not None:
-        if match_prefix and request_path.startswith(path):
-            return True
-        elif request_path == path:
-            return True
-
-    if path_regex is not None:
-        regex = _get_compiled_prefix_regex(path_regex)
-        if regex.match(request_path):
-            return True
-
-    return False
-
-
-def strip_path_prefix(request_path: str, path: Optional[str] = None, path_regex: Optional[str] = None) -> str:
+def strip_path_prefix(request_path: str, path: Optional[str] = None, path_regex: Optional[Pattern] = None) -> str:
     if path is not None and request_path.startswith(path):
         offset = len(path)
         return request_path[offset:]
 
     if path_regex is not None:
-        regex = _get_compiled_prefix_regex(path_regex)
-
-        return re.sub(regex, '', request_path)
+        return re.sub(path_regex, '', request_path)
 
     return request_path
 

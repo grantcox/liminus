@@ -1,14 +1,15 @@
 from urllib.parse import urlencode
 
 from starlette.requests import Request
-from starlette.responses import Response, RedirectResponse
+from starlette.responses import RedirectResponse, Response
 
-from liminus.base import Backend, BaseGkHTTPMiddleware, ReqSettings
+from liminus.base.backend import Backend, ReqSettings
+from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.jwt_mixin import JwtHandlerMixin
 from liminus.settings import config, logger
 
 
-class StaffAuthSessionMiddleware(BaseGkHTTPMiddleware, JwtHandlerMixin):
+class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
     """
     This handler manages the session for staff on our campaign admin.
     It ensures a valid auth session and JWT are present for all requests to the campaign admin,
@@ -22,7 +23,7 @@ class StaffAuthSessionMiddleware(BaseGkHTTPMiddleware, JwtHandlerMixin):
     SESSION_IDLE_TIMEOUT_SECONDS = config['STAFF_SESSION_IDLE_TIMEOUT_SECONDS']
     SESSION_STRICT_MAX_LIFETIME_SECONDS = config['STAFF_SESSION_STRICT_MAX_LIFETIME_SECONDS']
 
-    AUTH_JWT_HEADER = 'Avaaz-Staff-Authentication-Jwt'
+    AUTH_JWT_HEADER = 'Staff-Authentication-Jwt'
     JWKS_URL = config['STAFF_AUTH_JWKS_URL']
     REFRESH_JWT_URL = config['STAFF_AUTH_JWT_REFRESH_URL']
     REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS = config['STAFF_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS']
@@ -35,7 +36,6 @@ class StaffAuthSessionMiddleware(BaseGkHTTPMiddleware, JwtHandlerMixin):
         # if the session has an auth JWT, add it to the backend request
         # if they don't have an auth JWT and this is a restricted backend, redirect to the login
         session = await self._load_session(req)
-        logger.info(f'staff auth session is: {session}')
 
         # do this JWT check first, as it will actually validate the JWT and remove it
         # if it's expired or otherwise invalid
@@ -45,7 +45,6 @@ class StaffAuthSessionMiddleware(BaseGkHTTPMiddleware, JwtHandlerMixin):
         # for backwards compatibility, we also want this JWT in the standard Authorization header
         if staff_jwt:
             req.state.headers['Authorization'] = f'Bearer {staff_jwt}'
-            logger.info(f'setting staff jwt header to {staff_jwt}')
 
         request_requires_staff_auth = self._is_staff_authn_required(settings)
         if request_requires_staff_auth and not staff_jwt:

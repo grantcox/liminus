@@ -1,10 +1,11 @@
 import logging
-from os import getenv
 
+from liminus.constants import Headers
 from liminus.utils import get_env_var, to_seconds
 
 
 LOG_LEVEL = get_env_var('LOG_LEVEL', default='INFO').upper()
+
 config = {
     'LOG_LEVEL': LOG_LEVEL,
     'DEBUG': get_env_var('DEBUG', '').lower() == 'true',
@@ -15,7 +16,13 @@ config = {
     ########################################################################################
     # CORS settings
     ########################################################################################
-    'APIS_CORS_ALLOWED_ORIGINS_REGEX': get_env_var('APIS_CORS_ALLOWED_ORIGINS_REGEX', ''),
+    'CORSMiddleware_args': {
+        'allow_origin_regex': get_env_var('APIS_CORS_ALLOWED_ORIGINS_REGEX'),
+        # expose_headers are non-standard headers that client JS can read from a response
+        'expose_headers': [Headers.PUBLIC_CSRF_TOKEN],
+        # allow_credentials is whether clients should include cookies in requests
+        'allow_credentials': True,
+    },
     ########################################################################################
     # sentry settings
     ########################################################################################
@@ -41,7 +48,7 @@ config = {
     # Public / member session settings
     ########################################################################################
     'PUBLIC_SESSION_COOKIE_NAME': get_env_var('PUBLIC_SESSION_COOKIE_NAME'),
-    'PUBLIC_CSRF_HEADER_NAME': 'Avaaz-Gk-Public-Csrf-Token',
+    'PUBLIC_CSRF_HEADER_NAME': 'Gk-Public-Csrf-Token',
     'PUBLIC_COOKIES_DOMAIN': get_env_var('PUBLIC_COOKIES_DOMAIN'),
     'PUBLIC_SESSION_IDLE_TIMEOUT_SECONDS': to_seconds(minutes=30),
     'PUBLIC_SESSION_STRICT_MAX_LIFETIME_SECONDS': to_seconds(hours=24),
