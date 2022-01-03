@@ -8,6 +8,7 @@ class Headers:
 
     CLOUDFLARE_CONNECTING_IP = 'cf-connecting-ip'
     X_FORWARDED_FOR = 'x-forwarded-for'
+    X_REQUESTED_WITH = 'x-requested-with'
 
     REQUEST_DEFAULT_ALLOW = {
         'accept-encoding',

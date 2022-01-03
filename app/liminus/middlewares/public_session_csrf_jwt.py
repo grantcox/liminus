@@ -1,6 +1,7 @@
 from starlette.requests import Request
 from starlette.responses import Response
 
+from liminus import bench
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.csrf_mixin import CsrfHandlerMixin

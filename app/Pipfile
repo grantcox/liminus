@@ -15,6 +15,9 @@ sentry-sdk = "*"
 starlette = "*"
 starlette_early_data = "*"
 uvicorn = "*"
+aiohttp = "*"
+cchardet = "*"
+aiodns = "*"
 
 [dev-packages]
 black = "==21.12b0"

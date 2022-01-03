@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 from starlette.requests import Request
 from starlette.responses import Response
 
+from liminus import bench
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
 from liminus.settings import logger
 from liminus.utils import get_cache_hash_key, to_seconds
@@ -71,25 +72,21 @@ class SessionHandlerMixin(RedisHandlerMixin):
         return get_cache_hash_key(self.SESSION_KEY_PREFIX, session_id)
 
     async def _store_session_in_cache(self, session_id: str, exp: int, data: Optional[dict]):
-        key = self._get_session_redis_key(session_id)
-        encoded_data = json.dumps(data)
-        await self.redis_client.setex(key, exp, encoded_data)
+        with bench.measure('_store_session_in_cache'):
+            key = self._get_session_redis_key(session_id)
+            encoded_data = json.dumps(data)
+            await self.redis_client.setex(key, exp, encoded_data)
 
     async def _load_session_from_cache(self, session_id: str) -> Optional[dict]:
-        if not session_id:
-            return None
-        key = self._get_session_redis_key(session_id)
-        encoded_data = await self.redis_client.get(key)
-        return json.loads(encoded_data) if encoded_data else None
+        with bench.measure('_load_session_from_cache'):
+            if not session_id:
+                return None
+            key = self._get_session_redis_key(session_id)
+            encoded_data = await self.redis_client.get(key)
+            return json.loads(encoded_data) if encoded_data else None
 
     async def _generate_unique_session_id(self) -> str:
-        # while a 32-byte random value should never get a collision, we always double-check
-        for i in range(10):
-            session_id = token_urlsafe(32)
-            existing_session = await self._load_session_from_cache(session_id)
-            if existing_session is None:
-                return session_id
-        raise Exception('Could not generate an unique session id in 10 iterations!')
+        return token_urlsafe(32)
 
     def _append_session_cookie_to_response(self, response: Response, session_id: str, age: Optional[int] = None):
         new_cookie = self._build_cookie(session_id, age)

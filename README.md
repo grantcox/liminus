@@ -111,3 +111,11 @@ We also use [isort](https://pycqa.github.io/isort/) to automatically sort import
 
 We use [Mypy](https://mypy.readthedocs.io/en/stable/) which is a static type checker and [Flake8](http://flake8.pycqa.org/) which is a wrapper around PyFlakes, pycodestyle, and McCabe to maintain code style.
 
+#### Load tests
+
+To run load tests:
+
+```sh
+./scripts/run-load-tests.sh
+```
+

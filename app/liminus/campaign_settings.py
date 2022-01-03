@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import aiomysql
+
 import phpserialize
 
 from liminus.settings import config

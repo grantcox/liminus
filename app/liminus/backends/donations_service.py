@@ -43,7 +43,7 @@ if service_name in config['ENABLED_BACKENDS']:
             RouteSettings(
                 path_regex=re.compile(
                     '/donation/public_api/'
-                    '(new_donation|oneclick_donation|replace_donation|set_user_donation_settings)'
+                    '(new_donation|oneclick_donation|replace_donation|set_user_donation_settings|get_donation_form_context)'
                 ),
                 allow_methods=[HttpMethods.POST],
             ),

@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
+from liminus import bench
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.jwt_mixin import JwtHandlerMixin

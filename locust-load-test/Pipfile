@@ -1,0 +1,18 @@
+[[source]]
+name = "dev"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+gunicorn = "*"
+locust = "*"
+starlette = "*"
+uvicorn = "*"
+
+[requires]
+python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true

@@ -1,8 +1,9 @@
 from json import JSONDecodeError
 from typing import Dict
 
+import aiohttp
 import httpx
-from starlette.datastructures import UploadFile
+from starlette.datastructures import UploadFile, MutableHeaders
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -10,27 +11,61 @@ from liminus.base.backend import ListenPathSettings, ReqSettings
 from liminus.settings import logger
 
 
-async def proxy_request_to_backend(request: Request) -> Response:
+httpx_client = httpx.AsyncClient()
+aiohttp_session = None
+
+
+async def proxy_request_to_backend_httpx(request: Request) -> Response:
     upstream_request_params = await construct_upstream_request_params(request)
+    upstream_request_params['headers'] = upstream_request_params['headers'].raw
     logger.debug(f'{request} proxying to {upstream_request_params["url"]}')
 
-    async with httpx.AsyncClient() as client:
-        upstream_request = client.build_request(**upstream_request_params)
-        upstream_response = await client.send(upstream_request, follow_redirects=False)
-        logger.debug(
-            f'{request} upstream responded with HTTP {upstream_response.status_code} '
-            f'after {upstream_response.elapsed}'
-        )
+    upstream_request = httpx_client.build_request(**upstream_request_params)
+    upstream_response = await httpx_client.send(upstream_request, follow_redirects=False)
+    logger.debug(
+        f'{request} upstream responded with HTTP {upstream_response.status_code} '
+        f'after {upstream_response.elapsed}'
+    )
 
-        # starlette.Response constructor expect a dict for headers
-        # but our httpx.Response has a multi-dict, eg supporting multiple items with the same key
-        # so we need to manually append these headers
-        response = Response(
-            content=upstream_response.content,
-            status_code=upstream_response.status_code,
-        )
-        for k, v in upstream_response.headers.multi_items():
-            response.headers.append(k, v)
+    # starlette.Response constructor only accepts a header dict, not multidict
+    # but after creation it becomes a multidict, and we can call .append()
+    response = Response(
+        content=upstream_response.content,
+        status_code=upstream_response.status_code,
+    )
+    for k, v in upstream_response.headers.multi_items():
+        response.headers.append(k, v)
+
+    return response
+
+
+async def get_aiohttp_session():
+    global aiohttp_session
+    if aiohttp_session is None:
+        aiohttp_session = aiohttp.ClientSession()
+    return aiohttp_session
+
+
+async def proxy_request_to_backend_aiohttp(request: Request) -> Response:
+    upstream_request_params = await construct_upstream_request_params(request)
+    upstream_request_params['timeout'] = aiohttp.ClientTimeout(total=upstream_request_params['timeout'])
+
+    logger.debug(f'{request} proxying to {upstream_request_params["url"]}')
+    session = await get_aiohttp_session()
+
+    upstream_response: aiohttp.ClientResponse = await session.request(allow_redirects=False, **upstream_request_params)
+    logger.debug(
+        f'{request} upstream responded with HTTP {upstream_response.status}'
+    )
+
+    # starlette.Response constructor only accepts a header dict, not multidict
+    # but after creation it becomes a multidict, and we can call .append()
+    response = Response(
+        content=await upstream_response.content.read(),
+        status_code=upstream_response.status,
+    )
+    for k, v in upstream_response.headers.items():
+        response.headers.append(k, v)
 
     return response
 
@@ -44,6 +79,7 @@ async def construct_upstream_request_params(request: Request) -> Dict:
     # build the upstream URL
     request_path = getattr(override, 'path', request.url.path)
     request_query = getattr(override, 'query', request.url.query)
+    request_headers: MutableHeaders = override.headers
 
     upstream_url = backend_listener.get_upstream_url(request_path)
     if request_query:
@@ -53,9 +89,9 @@ async def construct_upstream_request_params(request: Request) -> Dict:
     upstream_request_params = {
         'method': getattr(override, 'method', request.method),
         'url': upstream_url,
-        'headers': override.headers.raw,
-        'timeout': backend_settings.timeout,
+        'headers': request_headers,
         'cookies': getattr(override, 'cookies', request.cookies),
+        'timeout': backend_settings.timeout
     }
 
     # if some middleware provided a new body, that takes precedence

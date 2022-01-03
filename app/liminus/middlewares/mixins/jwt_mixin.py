@@ -20,22 +20,21 @@ class JwtHandlerMixin(SessionHandlerMixin):
 
     async def _store_jwt_if_present(self, response: Response, session: Session) -> bool:
         # if the response has a member auth JWT, create a new session (and CSRF) and add this JWT to it
-        if self.AUTH_JWT_HEADER in response.headers:
-            logger.info(f'Got a JWT in the response: {response.headers[self.AUTH_JWT_HEADER]}')
-            # store this in the session too
-            session.session_data = session.session_data or {}
-            session.session_data['jwt'] = response.headers[self.AUTH_JWT_HEADER]
-            logger.info(f'session: {session}')
+        if self.AUTH_JWT_HEADER not in response.headers:
+            return False
 
-            # we don't want this JWT to be in our response, so remove it
-            # if we delete the header entirely then Tyk will keep the upstream value, so we just have to overwrite
-            response.headers[self.AUTH_JWT_HEADER] = ''
+        # store this in the session too
+        session.session_data = session.session_data or {}
+        session.session_data['jwt'] = response.headers[self.AUTH_JWT_HEADER]
 
-            # when we change auth levels, we always create a new session id, keeping existing data
-            # but destroy the current one first
-            await self._store_session(session.session_id, None)
-            return True
-        return False
+        # we don't want this JWT to be in our response, so remove it
+        # if we delete the header entirely then Tyk will keep the upstream value, so we just have to overwrite
+        response.headers[self.AUTH_JWT_HEADER] = ''
+
+        # when we change auth levels, we always create a new session id, keeping existing data
+        # but destroy the current one first
+        await self._store_session(session.session_id, None)
+        return True
 
     async def _append_jwt_if_present(self, request: Request, session: Session) -> Optional[str]:
         if not session.session_data or 'jwt' not in session.session_data:

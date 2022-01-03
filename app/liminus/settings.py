@@ -27,8 +27,11 @@ config = {
         'allow_origin_regex': get_env_var('APIS_CORS_ALLOWED_ORIGINS_REGEX'),
         # expose_headers are non-standard headers that client JS can read from a response
         'expose_headers': [Headers.PUBLIC_CSRF_TOKEN],
+        # allow_headers are non-standard headres that clients can submit with requests
+        'allow_headers': [Headers.PUBLIC_CSRF_TOKEN, Headers.X_REQUESTED_WITH],
         # allow_credentials is whether clients should include cookies in requests
         'allow_credentials': True,
+        'allow_methods': ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     },
     ########################################################################################
     # sentry settings

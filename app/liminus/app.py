@@ -5,17 +5,25 @@ import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.routing import Route
 from starlette_early_data import EarlyDataMiddleware
 
-from liminus import health_check
+from liminus import health_check, bench
 from liminus.middleware_runner import GatekeeperMiddlewareRunner
+from liminus.middlewares.cors import CorsMiddleware
 from liminus.middlewares.request_logging import RequestLoggingMiddleware
-from liminus.proxy_request import proxy_request_to_backend
-from liminus.settings import config
+from liminus.proxy_request import proxy_request_to_backend_httpx, proxy_request_to_backend_aiohttp
+from liminus.settings import config, logger
+
+
+async def on_app_startup():
+    logger.info('APP STARTUP')
+
+
+async def on_app_shutdown():
+    logger.info('Benchmarks: \n' + bench.pretty())
 
 
 def create_app():
@@ -23,7 +31,7 @@ def create_app():
     monkey_patch_starlette_request_tostring()
 
     async def catch_all(request: Request):
-        response = await proxy_request_to_backend(request)
+        response = await proxy_request_to_backend_aiohttp(request)
         return response
 
     routes = [
@@ -37,12 +45,14 @@ def create_app():
         Middleware(RequestLoggingMiddleware),
         Middleware(SentryAsgiMiddleware),
         Middleware(GZipMiddleware),
-        Middleware(CORSMiddleware, **config['CORSMiddleware_args']),
+        Middleware(CorsMiddleware, **config['CORSMiddleware_args']),
         Middleware(EarlyDataMiddleware, deny_all=True),
         Middleware(GatekeeperMiddlewareRunner),
     ]
 
-    app = Starlette(routes=routes, middleware=middlewares)
+    app = Starlette(routes=routes, middleware=middlewares,
+        on_startup=[on_app_startup],
+        on_shutdown=[on_app_shutdown])
     return app
 
 

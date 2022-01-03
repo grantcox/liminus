@@ -1,0 +1,20 @@
+version: "3.3"
+
+services:
+  app:
+    env_file:
+      - ./locust-load-test/.env
+    command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 --workers 1
+
+  liminus-echo:
+    build:
+      context: "./locust-load-test"
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    volumes:
+      - ./locust-load-test/:/usr/app/
+    command: gunicorn echo:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 --workers 5
+    ports:
+      - 5000
+    networks:
+      - internal

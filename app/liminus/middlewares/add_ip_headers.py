@@ -3,7 +3,6 @@ from starlette.requests import Request
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.constants import Headers
-from liminus.settings import logger
 from liminus.utils import normalize_ip_address
 
 
