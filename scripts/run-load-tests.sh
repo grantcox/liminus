@@ -43,7 +43,7 @@ PROJECT=$PROJECT docker-compose \
 sleep 5
 
 if [[ -z $TARGET_HOST ]]; then
-    TARGET_HOST=https://host.docker.internal:8078
+    TARGET_HOST=https://host.docker.internal:8091
 fi
 
 IMAGE_NAME="$DOCKER_REGISTRY/avaaz/locust"

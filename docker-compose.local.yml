@@ -20,7 +20,7 @@ services:
   traefik:
     image: traefik:latest
     ports:
-      - 8078:443
+      - 8091:443
     restart: unless-stopped
     depends_on:
       - app
@@ -30,7 +30,10 @@ services:
       - ./traefik/certs/local-liminus.crt:/etc/ssl/certs/public.crt
       - ./traefik/certs/local-liminus.key:/etc/ssl/private/private.key
     networks:
-      - traefik_default
+      traefik_default:
+      intra_service_network:
+        aliases:
+          - gatekeeper.liminus
 
   redis:
     image: redis:latest

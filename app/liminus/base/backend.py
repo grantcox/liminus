@@ -1,5 +1,5 @@
-from enum import Enum
 import re
+from enum import Enum
 from typing import Any, List, Optional, Pattern, Set, Type
 
 from pydantic import BaseModel
@@ -52,11 +52,30 @@ class ReqSettings(BaseModel):
     timeout: Optional[int] = None
 
 
+class PathRewrites(BaseModel):
+    path_from: Optional[str] = None
+    path_from_regex: Optional[Pattern] = None
+    path_to: Optional[str] = None
+    path_to_regex: Optional[Pattern] = None
+
+    def rewrite_path(self, request_path: str) -> str:
+        if self.path_from is not None and request_path == self.path_from:
+            return self.path_to or request_path
+
+        if self.path_from_regex is not None:
+            replacement = self.path_from_regex or self.path_from
+            if replacement:
+                return re.sub(self.path_from_regex, replacement, request_path)
+
+        return request_path
+
+
 class ListenPathSettings(ReqSettings):
     prefix: Optional[str] = None
     path_regex: Optional[Pattern] = None
     upstream_dsn: str = ''
     strip_prefix: bool = True
+    rewrites: List[PathRewrites] = []
 
     def matches_path(self, request_path: str) -> bool:
         if self.prefix and request_path.startswith(self.prefix):
@@ -69,6 +88,8 @@ class ListenPathSettings(ReqSettings):
 
     def get_upstream_url(self, request_path: str) -> str:
         upstream_path = request_path
+        for rewrite in self.rewrites:
+            upstream_path = rewrite.rewrite_path(upstream_path)
         if self.strip_prefix:
             upstream_path = strip_path_prefix(request_path, self.prefix, self.path_regex)
         return self.upstream_dsn.rstrip('/') + '/' + upstream_path.lstrip('/')

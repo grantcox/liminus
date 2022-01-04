@@ -1,12 +1,13 @@
 import html
 import json
 import logging
+from http import HTTPStatus
 
-import httpx
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.routing import Route
 
 from liminus.backends import valid_backends
+from liminus.proxy_request import http_request
 from liminus.settings import config, logger
 from liminus.utils import loggable_string, loggable_url
 
@@ -80,14 +81,15 @@ async def get_http_connection_status(url) -> str:
         return CHECK_STATUS_FAILURE
 
     try:
-        response = httpx.get(url, timeout=2)
+        response = await http_request('GET', url, timeout=2)
 
-        if response.status_code == httpx.codes.OK:
+        if response.status == HTTPStatus.OK:
             return CHECK_STATUS_SUCCESS
 
+        response_body = await response.text()
         logsafe_url = loggable_url(url)
-        logsafe_response = loggable_string(response.content.decode('utf-8'), head=100, tail=50)
-        return f'GET {logsafe_url} gave HTTP {response.status_code}: {logsafe_response}'
+        logsafe_response = loggable_string(response_body, head=100, tail=50)
+        return f'GET {logsafe_url} gave HTTP {response.status}: {logsafe_response}'
 
     except Exception as exc:
         logging.exception('HTTP GET request failed')

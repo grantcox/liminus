@@ -4,7 +4,6 @@ from secrets import token_urlsafe
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from liminus import bench
 from liminus.base.backend import ReqSettings
 from liminus.errors import ErrorResponse
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
@@ -60,7 +59,6 @@ class CsrfHandlerMixin(RedisHandlerMixin):
         await self._fail_with_csrf_token_error(request, session_id)
         return False
 
-    @bench.measure_function
     async def _add_new_csrf(self, session_id: str) -> str:
         # add a new token to this session's valid list
         valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
@@ -72,7 +70,6 @@ class CsrfHandlerMixin(RedisHandlerMixin):
 
         return new_csrf_token
 
-    @bench.measure_function
     async def _consume_csrf(self, session_id: str, csrf_token: str):
         # remove the CSRF from the valid list, and put it in a key with very short TTL for concurrent requests
         # add the 'just used' first, so there is no possible race condition where the CSRF is missing
@@ -83,7 +80,6 @@ class CsrfHandlerMixin(RedisHandlerMixin):
         valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
         await self.redis_client.lrem(valid_keys_key, count=0, value=csrf_token)
 
-    @bench.measure_function
     async def _is_valid_current_csrf(self, session_id: str, csrf_token: str) -> bool:
         if not csrf_token:
             return False
@@ -92,7 +88,6 @@ class CsrfHandlerMixin(RedisHandlerMixin):
         valid_keys = await self.redis_client.lrange(valid_keys_key, 0, 3)
         return bytes(csrf_token, 'utf-8') in valid_keys
 
-    @bench.measure_function
     async def _is_just_used_csrf(self, session_id: str, csrf_token: str) -> bool:
         just_used_key = self._get_just_used_csrf_cache_key(session_id, csrf_token)
         just_used = await self.redis_client.get(just_used_key)

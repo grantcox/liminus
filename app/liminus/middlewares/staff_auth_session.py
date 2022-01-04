@@ -3,7 +3,6 @@ from urllib.parse import urlencode
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
-from liminus import bench
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.jwt_mixin import JwtHandlerMixin
@@ -49,6 +48,7 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
 
         request_requires_staff_auth = self._is_staff_authn_required(settings)
         if request_requires_staff_auth and not staff_jwt:
+            logger.debug('{req} requires staff auth but none yet present, redirecting to SAML login flow')
             return self._redirect_to_staff_auth_login(req)
 
     async def handle_response(self, res: Response, req: Request, settings: ReqSettings, backend: Backend):
@@ -57,7 +57,7 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
 
         if is_new_session or jwt_refresh_session:
             # generate a new session
-            session.session_id = await self._generate_unique_session_id()
+            session.session_id = self._generate_unique_session_id()
             self._append_session_cookie_to_response(
                 res, session.session_id, age=self.SESSION_STRICT_MAX_LIFETIME_SECONDS
             )

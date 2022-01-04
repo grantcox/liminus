@@ -2,16 +2,16 @@ from http import HTTPStatus
 from typing import Optional
 from urllib.parse import parse_qsl
 
-import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from liminus.constants import Headers
-from liminus.campaign_settings import CampaignSettingsProvider
-from liminus.base.backend import Backend, ReqSettings, RecaptchaEnabled
+from liminus.base.backend import Backend, RecaptchaEnabled, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
+from liminus.campaign_settings import CampaignSettingsProvider
+from liminus.constants import Headers
 from liminus.errors import ErrorResponse
-from liminus.settings import logger, config
+from liminus.proxy_request import http_request
+from liminus.settings import config, logger
 from liminus.utils import php_bool
 
 
@@ -50,24 +50,27 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
 
         captcha_required = php_bool(campaign_settings.get('antispam_captcha_on_sign_forms_enabled', False))
         if captcha_required:
-            raise self._invalid_recaptcha_response(request,
-                f'Campaign {campaign_id} requires a captcha, but none was provided')
+            raise self._invalid_recaptcha_response(
+                request, f'Campaign {campaign_id} requires a captcha, but none was provided'
+            )
 
     async def _validate_recaptcha_token(self, request: Request, recaptcha_token: Optional[str]):
         verify_endpoint = config['RECAPTCHA_VERIFY_URL']
         recaptcha_secret = config['RECAPTCHA_SECRET']
 
-        async with httpx.AsyncClient() as client:
-            post_data = {
+        response = await http_request(
+            'POST',
+            verify_endpoint,
+            data={
                 'secret': recaptcha_secret,
                 'response': recaptcha_token,
-            }
-            response = await client.post(verify_endpoint, data=post_data, timeout=5)
-            logger.info(f'Recaptcha response is: {response.json()}')
-            logger.info(f'{request} captcha verified, status=')
+            },
+        )
+        response_data = await response.json()
+        logger.info(f'{request} captcha verified, response is: {response.status} {response_data}')
 
-            if not response.json()['success']:
-                raise self._invalid_recaptcha_response(request, 'Captcha token was invalid')
+        if not response_data['success']:
+            raise self._invalid_recaptcha_response(request, 'Captcha token was invalid')
 
     def _invalid_recaptcha_response(self, request: Request, details: str) -> ErrorResponse:
         error = f'{request} failing due to invalid recaptcha: {details}'

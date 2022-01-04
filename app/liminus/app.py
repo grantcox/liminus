@@ -10,20 +10,12 @@ from starlette.requests import Request
 from starlette.routing import Route
 from starlette_early_data import EarlyDataMiddleware
 
-from liminus import health_check, bench
+from liminus import health_check
 from liminus.middleware_runner import GatekeeperMiddlewareRunner
 from liminus.middlewares.cors import CorsMiddleware
 from liminus.middlewares.request_logging import RequestLoggingMiddleware
-from liminus.proxy_request import proxy_request_to_backend_httpx, proxy_request_to_backend_aiohttp
-from liminus.settings import config, logger
-
-
-async def on_app_startup():
-    logger.info('APP STARTUP')
-
-
-async def on_app_shutdown():
-    logger.info('Benchmarks: \n' + bench.pretty())
+from liminus.proxy_request import proxy_request_to_backend
+from liminus.settings import config
 
 
 def create_app():
@@ -31,7 +23,7 @@ def create_app():
     monkey_patch_starlette_request_tostring()
 
     async def catch_all(request: Request):
-        response = await proxy_request_to_backend_aiohttp(request)
+        response = await proxy_request_to_backend(request)
         return response
 
     routes = [
@@ -50,9 +42,7 @@ def create_app():
         Middleware(GatekeeperMiddlewareRunner),
     ]
 
-    app = Starlette(routes=routes, middleware=middlewares,
-        on_startup=[on_app_startup],
-        on_shutdown=[on_app_shutdown])
+    app = Starlette(routes=routes, middleware=middlewares)
     return app
 
 

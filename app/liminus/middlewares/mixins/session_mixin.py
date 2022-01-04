@@ -8,7 +8,6 @@ from typing import Optional, Tuple
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus import bench
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
 from liminus.settings import logger
 from liminus.utils import get_cache_hash_key, to_seconds
@@ -50,7 +49,7 @@ class SessionHandlerMixin(RedisHandlerMixin):
             if strict_expiry < time():
                 # this session needs to be invalidated
                 logger.info(f'session {session_id} has expired, invalidating')
-                self._store_session(session_id, None)
+                await self._store_session(session_id, None)
                 session_data = None
 
         return Session(session_id, session_data)
@@ -72,20 +71,18 @@ class SessionHandlerMixin(RedisHandlerMixin):
         return get_cache_hash_key(self.SESSION_KEY_PREFIX, session_id)
 
     async def _store_session_in_cache(self, session_id: str, exp: int, data: Optional[dict]):
-        with bench.measure('_store_session_in_cache'):
-            key = self._get_session_redis_key(session_id)
-            encoded_data = json.dumps(data)
-            await self.redis_client.setex(key, exp, encoded_data)
+        key = self._get_session_redis_key(session_id)
+        encoded_data = json.dumps(data)
+        await self.redis_client.setex(key, exp, encoded_data)
 
     async def _load_session_from_cache(self, session_id: str) -> Optional[dict]:
-        with bench.measure('_load_session_from_cache'):
-            if not session_id:
-                return None
-            key = self._get_session_redis_key(session_id)
-            encoded_data = await self.redis_client.get(key)
-            return json.loads(encoded_data) if encoded_data else None
+        if not session_id:
+            return None
+        key = self._get_session_redis_key(session_id)
+        encoded_data = await self.redis_client.get(key)
+        return json.loads(encoded_data) if encoded_data else None
 
-    async def _generate_unique_session_id(self) -> str:
+    def _generate_unique_session_id(self) -> str:
         return token_urlsafe(32)
 
     def _append_session_cookie_to_response(self, response: Response, session_id: str, age: Optional[int] = None):

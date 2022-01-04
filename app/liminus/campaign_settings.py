@@ -4,7 +4,6 @@ from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import aiomysql
-
 import phpserialize
 
 from liminus.settings import config
@@ -40,8 +39,7 @@ class CampaignSettingsProvider:
 
         fresh_campaign_data = await self._get_campaign_settings_from_db(campaign_id)
         self.campaign_settings_cache[campaign_id] = CampaignSettingsCache(
-            expiration=(now + self.cache_time),
-            campaign_data=fresh_campaign_data
+            expiration=(now + self.cache_time), campaign_data=fresh_campaign_data
         )
         return fresh_campaign_data
 
@@ -69,6 +67,6 @@ class CampaignSettingsProvider:
                 user=db_parts.username,
                 password=db_parts.password,
                 db=db_parts.path.strip('/'),
-                charset='utf8mb4'
+                charset='utf8mb4',
             )
         return self.connection_pool

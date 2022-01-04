@@ -3,8 +3,8 @@ import re
 from liminus.base.backend import Backend, CsrfSettings, HeadersAllowedSettings, ListenPathSettings, RouteSettings
 from liminus.constants import Headers, HttpMethods
 from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
-from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus.middlewares.recaptcha_check import RecaptchaCheckMiddleware
+from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus.settings import config
 from liminus.utils import get_env_var
 
@@ -43,7 +43,8 @@ if service_name in config['ENABLED_BACKENDS']:
             RouteSettings(
                 path_regex=re.compile(
                     '/donation/public_api/'
-                    '(new_donation|oneclick_donation|replace_donation|set_user_donation_settings|get_donation_form_context)'
+                    '(new_donation|oneclick_donation|replace_donation|set_user_donation_settings'
+                    '|get_donation_form_context)'
                 ),
                 allow_methods=[HttpMethods.POST],
             ),

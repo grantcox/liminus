@@ -1,12 +1,13 @@
+from http import HTTPStatus
 from time import time
 from typing import Optional
 
-import httpx
 from liminus_auth import UnauthenticatedException, validate_jwt
 from starlette.requests import Request
 from starlette.responses import Response
 
 from liminus.middlewares.mixins.session_mixin import Session, SessionHandlerMixin
+from liminus.proxy_request import http_request
 from liminus.settings import logger
 from liminus.utils import get_cache_hash_key, to_seconds
 
@@ -63,12 +64,12 @@ class JwtHandlerMixin(SessionHandlerMixin):
                 del session.session_data['jwt']
             else:
                 session.session_data['jwt'] = valid_jwt
-            self._store_session(session)
+            await self._store_session(session)
 
         if valid_jwt:
             # append the JWT to the backing service request
             request.state.headers[self.AUTH_JWT_HEADER] = valid_jwt
-            logger.info(f'{request} is for authenticated user, adding {self.AUTH_JWT_HEADER} header')
+            logger.debug(f'{request} is for authenticated user, adding {self.AUTH_JWT_HEADER} header')
             return valid_jwt
 
         return None
@@ -85,12 +86,11 @@ class JwtHandlerMixin(SessionHandlerMixin):
         # we don't need to explicitly delete it - let it provide poor-man's rate limiting
         await self.redis_client.expire(semaphore_key, self.REFRESH_JWT_SEMAPHORE_TTL_SECONDS)
 
-        # TODO: make this async
-        response = httpx.post(self.REFRESH_JWT_URL, json={'jwt': jwt})
-        if response.status_code == httpx.codes.OK:
+        response = await http_request('POST', self.REFRESH_JWT_URL, json={'jwt': jwt})
+        if response.status == HTTPStatus.OK:
             if self.AUTH_JWT_HEADER in response.headers:
                 # we got a nice new token
-                return response.headers[self.AUTH_JWT_HEADER]
+                return response.headers.getone(self.AUTH_JWT_HEADER)
 
         # could not be refreshed
         return None

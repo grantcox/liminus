@@ -34,6 +34,7 @@ def measure_function(fn):
         finally:
             stop(label)
         return result
+
     return wrapper
 
 
@@ -60,6 +61,4 @@ def results() -> List[Tuple[float, str, str]]:
 def pretty() -> str:
     r = results()
     max_label_width = max([len(mark) for cumulative, mark, summary in r])
-    return '\n'.join([
-        '%s: %s' % (mark.rjust(max_label_width), summary)
-        for cumulative, mark, summary in r])
+    return '\n'.join(['%s: %s' % (mark.rjust(max_label_width), summary) for cumulative, mark, summary in r])

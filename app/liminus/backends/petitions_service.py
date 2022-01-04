@@ -1,4 +1,4 @@
-from liminus.base.backend import Backend, AuthSettings, ListenPathSettings
+from liminus.base.backend import AuthSettings, Backend, ListenPathSettings
 from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
 from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
 from liminus.middlewares.staff_auth_session import StaffAuthSessionMiddleware

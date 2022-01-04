@@ -1,4 +1,3 @@
-from os import write
 from typing import Optional, Union
 
 from starlette.datastructures import Headers, MutableHeaders
@@ -18,10 +17,14 @@ class RestrictHeadersMiddleware(GkRequestMiddleware):
     async def handle_response(self, res: Response, req: Request, settings: ReqSettings, backend: Backend):
         self._filter_headers(req, 'response', res.headers, res.headers, settings.allowed_response_headers)
 
-    def _filter_headers(self, req: Request, type: str,
-                        read_headers: Union[Headers, MutableHeaders],
-                        write_headers: MutableHeaders,
-                        headers_allowed: Optional[HeadersAllowedSettings]):
+    def _filter_headers(
+        self,
+        req: Request,
+        type: str,
+        read_headers: Union[Headers, MutableHeaders],
+        write_headers: MutableHeaders,
+        headers_allowed: Optional[HeadersAllowedSettings],
+    ):
         if not headers_allowed:
             return
 

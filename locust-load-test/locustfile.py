@@ -11,6 +11,10 @@ realworld_cookie_header = (
     'European+Standard+Time)&version=3.6.19&groups=1%3A1%2C2%3A1%2C4%3A1%2C101%3A1%2C102%3A1%2C105%3A1&'
     'AwaitingReconsent=false'
 )
+realworld_user_agent = (
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/96.0.4664.110 Safari/537.36',
+)
 
 
 class GatekeeperPyUser(FastHttpUser):
@@ -35,13 +39,10 @@ class GatekeeperPyUser(FastHttpUser):
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-site',
-                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+                'user-agent': realworld_user_agent,
                 'x-requested-with': 'XMLHttpRequest',
-
             },
-            data=json.dumps({
-                'authData': {'userHash': None, 'campaign_id': 3116, 'lang': 'en'}
-            }),
+            data=json.dumps({'authData': {'userHash': None, 'campaign_id': 3116, 'lang': 'en'}}),
         )
 
     @task
@@ -62,9 +63,9 @@ class GatekeeperPyUser(FastHttpUser):
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-origin',
-                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+                'user-agent': realworld_user_agent,
                 'x-requested-with': 'XMLHttpRequest',
-            }
+            },
         )
 
     @task

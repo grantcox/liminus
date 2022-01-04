@@ -1,7 +1,6 @@
 from starlette.requests import Request
 from starlette.responses import Response
 
-from liminus import bench
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.csrf_mixin import CsrfHandlerMixin
@@ -50,7 +49,7 @@ class PublicSessionMiddleware(GkRequestMiddleware, CsrfHandlerMixin, JwtHandlerM
         needs_new_session = is_new_session or jwt_refresh_session
         if needs_new_session:
             # generate a new session
-            session.session_id = await self._generate_unique_session_id()
+            session.session_id = self._generate_unique_session_id()
             self._append_session_cookie_to_response(res, session.session_id)
 
         await self._rotate_csrf_if_needed(req, res, session.session_id, force_refresh=needs_new_session)
