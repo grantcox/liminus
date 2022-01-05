@@ -1,14 +1,11 @@
 import re
 from enum import Enum
-from typing import Any, List, Optional, Pattern, Set, Type
+from typing import Any, List, Optional, Pattern, Set, Tuple, Type
 
 from pydantic import BaseModel
 
 from liminus.constants import Headers, HttpMethods
 from liminus.utils import strip_path_prefix
-
-
-_middleware_instances = {}
 
 
 class AuthSettings(BaseModel):
@@ -43,7 +40,7 @@ class RecaptchaSettings(BaseModel):
 
 
 class ReqSettings(BaseModel):
-    CSRF: Optional[CsrfSettings] = None
+    csrf: Optional[CsrfSettings] = None
     auth: Optional[AuthSettings] = None
     recaptcha: Optional[RecaptchaSettings] = None
     allowed_request_headers: Optional[HeadersAllowedSettings] = None
@@ -76,6 +73,7 @@ class ListenPathSettings(ReqSettings):
     upstream_dsn: str = ''
     strip_prefix: bool = True
     rewrites: List[PathRewrites] = []
+    extra_headers: List[Tuple[str, str]] = []
 
     def matches_path(self, request_path: str) -> bool:
         if self.prefix and request_path.startswith(self.prefix):
@@ -100,16 +98,13 @@ class RouteSettings(ReqSettings):
     path_regex: Optional[Pattern] = None
     allow_methods: Set[str] = {HttpMethods.ALL}
 
-    def route_exactly_matches(self, request_path: str, request_method: str) -> bool:
-        if not self.method_matches(request_method):
-            return False
+    def __str__(self) -> str:
+        return f'{self.path or self.path_regex}'
 
+    def route_exactly_matches(self, request_path: str) -> bool:
         return self.path == request_path
 
-    def route_matches(self, request_path: str, request_method: str) -> bool:
-        if not self.method_matches(request_method):
-            return False
-
+    def route_matches(self, request_path: str) -> bool:
         if self.path == request_path:
             return True
 
@@ -131,7 +126,7 @@ class Backend(ReqSettings):
     listen: ListenPathSettings = ListenPathSettings()
     routes: List[RouteSettings] = [RouteSettings(path_regex=re.compile('.*'))]
 
-    CSRF: CsrfSettings = CsrfSettings()
+    csrf: CsrfSettings = CsrfSettings()
     auth: AuthSettings = AuthSettings()
     recaptcha: RecaptchaSettings = RecaptchaSettings()
     allowed_request_headers: HeadersAllowedSettings = HeadersAllowedSettings(allowlist=Headers.REQUEST_DEFAULT_ALLOW)
@@ -143,11 +138,7 @@ class Backend(ReqSettings):
     def __str__(self):
         return f'<Backend "{self.name}">'
 
-    def __init__(__pydantic_self__, **data: Any) -> None:
-        super().__init__(**data)
-        __pydantic_self__._compile_settings()
-
-    def _compile_settings(self):
+    def init(self):
         # coalesce all the ReqSettings into explicit / complete objects on each route
         # so we don't have to do it for every separate request
         self._coalesce_settings(self.listen, self)
@@ -157,10 +148,7 @@ class Backend(ReqSettings):
 
         # create instances for all the middleware classes
         for mw_class in self.middlewares:
-            if mw_class.__name__ not in _middleware_instances:
-                _middleware_instances[mw_class.__name__] = mw_class()
-
-            self.middleware_instances.append(_middleware_instances[mw_class.__name__])
+            self.middleware_instances.append(mw_class())
 
     def _coalesce_settings(self, into: ReqSettings, *args):
         for setting_source in args:

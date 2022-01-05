@@ -9,17 +9,26 @@ LOG_LEVEL = get_env_var('LOG_LEVEL', default='INFO').upper()
 config = {
     'LOG_LEVEL': LOG_LEVEL,
     'DEBUG': get_env_var('DEBUG', '').lower() == 'true',
+    'IS_LOAD_TESTING': get_env_var('IS_LOAD_TESTING', '').lower() == 'true',
     ########################################################################################
     # General settings
     ########################################################################################
     'ENABLED_BACKENDS': [be.strip() for be in get_env_var('ENABLED_BACKENDS').split(',')],
+    'BACKEND_AUTH_SERVICE_DSN': get_env_var('BACKEND_AUTH_SERVICE_DSN'),
+    'BACKEND_DONATIONS_DSN': get_env_var('BACKEND_DONATIONS_DSN'),
+    'BACKEND_MEMBERS_SERVICE_DSN': get_env_var('BACKEND_MEMBERS_SERVICE_DSN'),
+    'BACKEND_PETITIONS_SERVICE_DSN': get_env_var('BACKEND_PETITIONS_SERVICE_DSN'),
+    'BACKEND_STATS_SERVICE_DSN': get_env_var('BACKEND_STATS_SERVICE_DSN'),
+    'BACKEND_WEB_ACT_DSN': get_env_var('BACKEND_WEB_ACT_DSN'),
+    'BACKEND_ADMIN_DSN': get_env_var('BACKEND_ADMIN_DSN'),
+    'BACKEND_DONATIONS_SERVICE_AUTH_JWT': get_env_var('DONATION_SERVICE_JWT'),
     ########################################################################################
     # Campaign settings, eg for recaptcha
     ########################################################################################
-    'READONLY_DATABASE_DSN': get_env_var('READONLY_DATABASE_DSN', ''),
+    'READONLY_DATABASE_DSN': get_env_var('READONLY_DATABASE_DSN'),
     'CAMPAIGN_SETTINGS_CACHE_EXPIRY_SECONDS': 30,
-    'RECAPTCHA_VERIFY_URL': get_env_var('RECAPTCHA_VERIFY_URL', ''),
-    'RECAPTCHA_SECRET': get_env_var('RECAPTCHA_SECRET', ''),
+    'RECAPTCHA_VERIFY_URL': get_env_var('RECAPTCHA_VERIFY_URL'),
+    'RECAPTCHA_SECRET': get_env_var('RECAPTCHA_SECRET'),
     ########################################################################################
     # CORS settings
     ########################################################################################
@@ -37,7 +46,7 @@ config = {
     # sentry settings
     ########################################################################################
     'SENTRY_DSN': get_env_var('SENTRY_DSN'),
-    'REDIS_DSN': get_env_var('REDIS_DSN', ''),
+    'REDIS_DSN': get_env_var('REDIS_DSN'),
     ########################################################################################
     # Staff session settings
     ########################################################################################
@@ -52,7 +61,7 @@ config = {
     # Staff auth JWT verification / refreshing
     ########################################################################################
     'STAFF_AUTH_JWKS_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/jwks',
-    'STAFF_AUTH_JWT_REFRESH_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/internal/staff/jwt/refresh',
+    'STAFF_AUTH_JWT_REFRESH_URL': (get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/internal/staff/jwt/refresh'),
     'STAFF_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS': to_seconds(minutes=30),
     ########################################################################################
     # Public / member session settings
@@ -65,8 +74,8 @@ config = {
     ########################################################################################
     # Member auth JWT verification / refreshing
     ########################################################################################
-    'MEMBER_AUTH_JWKS_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN', '') + '/jwks',
-    'MEMBER_AUTH_JWT_REFRESH_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN', '') + '/internal/members/jwt/refresh',
+    'MEMBER_AUTH_JWKS_URL': get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/jwks',
+    'MEMBER_AUTH_JWT_REFRESH_URL': (get_env_var('BACKEND_AUTH_SERVICE_DSN') + '/internal/members/jwt/refresh'),
     'MEMBER_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS': to_seconds(minutes=30),
     ########################################################################################
     # logging settings
@@ -76,7 +85,11 @@ config = {
         'disable_existing_loggers': False,
         'formatters': {'default': {'format': '%(levelname)-6s %(asctime)s %(name)s: %(message)s'}},
         'handlers': {
-            'console': {'level': LOG_LEVEL, 'class': 'logging.StreamHandler', 'formatter': 'default'},
+            'console': {
+                'level': LOG_LEVEL,
+                'class': 'logging.StreamHandler',
+                'formatter': 'default',
+            },
         },
         'loggers': {'': {'level': LOG_LEVEL, 'handlers': ['console'], 'propagate': True}},
     },

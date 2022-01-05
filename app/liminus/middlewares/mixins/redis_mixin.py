@@ -1,4 +1,4 @@
-import aioredis
+from aioredis.client import Redis
 
 from liminus.settings import config
 
@@ -10,7 +10,6 @@ class RedisHandlerMixin:
     @property
     def redis_client(self):
         if not self._redis_client:
-            if not config['REDIS_DSN']:
-                raise EnvironmentError('No REDIS_DSN env var defined')
-            self._redis_client = aioredis.from_url(config['REDIS_DSN'])
+            self._redis_client = Redis.from_url(config['REDIS_DSN'])
+
         return self._redis_client

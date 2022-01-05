@@ -4,10 +4,10 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 
 [packages]
+aiohttp = {extras = ["speedups"], version = "*"}
 aiomysql = "*"
-aioredis = "*"
+aioredis = {extras = ["hiredis"], version = "*"}
 gunicorn = "*"
-httpx = "*"
 phpserialize = "*"
 pydantic = "*"
 python-multipart = "*"
@@ -15,9 +15,6 @@ sentry-sdk = "*"
 starlette = "*"
 starlette_early_data = "*"
 uvicorn = "*"
-aiohttp = "*"
-cchardet = "*"
-aiodns = "*"
 
 [dev-packages]
 black = "==21.12b0"

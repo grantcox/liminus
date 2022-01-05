@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse, Response
 from liminus.base.backend import ReqSettings
 from liminus.errors import ErrorResponse
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
-from liminus.settings import logger
+from liminus.settings import config, logger
 from liminus.utils import get_cache_hash_key
 
 
@@ -26,15 +26,16 @@ class CsrfHandlerMixin(RedisHandlerMixin):
             # we would prefer to set the CSRF in a cookie too (as then browsers will always pick it up)
             # but Tyk only allows a single 'Set-Cookie' header per response,
             # so it could conflict with the session cookie
-            csrf_token = await self._add_new_csrf(session_id)
-            response.headers[self.CSRF_HEADER_NAME] = csrf_token
+            new_csrf_token = token_urlsafe(32)
+            await self._add_new_csrf(session_id, new_csrf_token)
+            response.headers[self.CSRF_HEADER_NAME] = new_csrf_token
 
     async def _verify_csrf_if_needed(self, request: Request, session_id: str, settings: ReqSettings) -> bool:
-        if not settings.CSRF or not settings.CSRF.require_token:
+        if not settings.csrf or not settings.csrf.require_token:
             # we don't need any CSRF for this backend
             return True
 
-        if request.method not in settings.CSRF.require_on_methods:
+        if request.method not in settings.csrf.require_on_methods:
             # we don't need to check a CSRF token for this kind of request
             return True
 
@@ -42,33 +43,44 @@ class CsrfHandlerMixin(RedisHandlerMixin):
         if await self._is_valid_current_csrf(session_id, csrf_token_from_header):
             # a valid CSRF token was provided in the request headers
 
-            if settings.CSRF.single_use:
+            if settings.csrf.single_use:
                 # any time we use a token, we want to rotate it
                 # this requires setting a response header in the response hook, not in this pre-hook
                 # so set a flag here that we will pick up in the response hook
-                self._consume_csrf(session_id, csrf_token_from_header)
+                await self._consume_csrf(session_id, csrf_token_from_header)
                 request.state.rotate_csrf = True
 
             return True
 
-        if self._is_just_used_csrf(session_id, csrf_token_from_header):
+        if await self._is_just_used_csrf(session_id, csrf_token_from_header):
             # this CSRF token has already been consumed, but very recently (probably from a concurrent request)
             # let this request go through, but we will not attach a fresh CSRF to this response
             return True
 
-        await self._fail_with_csrf_token_error(request, session_id)
-        return False
+        if config['IS_LOAD_TESTING']:
+            # when load testing we check the redis keys, but don't actually fail out
+            return True
 
-    async def _add_new_csrf(self, session_id: str) -> str:
+        # CSRF token is required but not provided, fail out
+        logger.info(f'{request} does not have expected CSRF token, failing out')
+        # if we're failing due to an invalid CSRF token, we should also give them a new one
+        new_csrf_token = token_urlsafe(32)
+        await self._add_new_csrf(session_id, new_csrf_token)
+        error_response = JSONResponse(
+            {'error': 'Invalid CSRF Token'},
+            status_code=HTTPStatus.UNAUTHORIZED,
+            headers={self.CSRF_HEADER_NAME: new_csrf_token},
+        )
+
+        raise ErrorResponse(error_response)
+
+    async def _add_new_csrf(self, session_id: str, new_csrf_token: str):
         # add a new token to this session's valid list
         valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
-        new_csrf_token = token_urlsafe(32)
 
         await self.redis_client.lpush(valid_keys_key, new_csrf_token)
         # ensure we only allow 3 concurrent CSRF tokens
         await self.redis_client.ltrim(valid_keys_key, start=0, end=2)
-
-        return new_csrf_token
 
     async def _consume_csrf(self, session_id: str, csrf_token: str):
         # remove the CSRF from the valid list, and put it in a key with very short TTL for concurrent requests
@@ -98,16 +110,3 @@ class CsrfHandlerMixin(RedisHandlerMixin):
 
     def _get_just_used_csrf_cache_key(self, session_id: str, csrf_token: str) -> str:
         return get_cache_hash_key('just_used-csrf-', f'{session_id}-{csrf_token}')
-
-    async def _fail_with_csrf_token_error(self, request: Request, session_id: str):
-        logger.info(f'{request} does not have expected CSRF token')
-
-        # if we're failing due to an invalid CSRF token, we should also give them a new one
-        csrf_token = await self._add_new_csrf(session_id)
-        error_response = JSONResponse(
-            {'error': 'Invalid CSRF Token'},
-            status_code=HTTPStatus.UNAUTHORIZED,
-            headers={self.CSRF_HEADER_NAME: csrf_token},
-        )
-
-        raise ErrorResponse(error_response)

@@ -26,7 +26,7 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
         recaptcha_token = req.headers.get(Headers.RECAPTCHA_TOKEN)
         if recaptcha_token:
             # we don't need to check any campaign settings - if a captcha is provided we always verify
-            return await self._validate_recaptcha_token(req, recaptcha_token)
+            return await self._verify_recaptcha_token(req, recaptcha_token)
 
         # no captcha was provided
         # that's ok if it's campaign dependent and this campaign id does not require one
@@ -54,7 +54,10 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
                 request, f'Campaign {campaign_id} requires a captcha, but none was provided'
             )
 
-    async def _validate_recaptcha_token(self, request: Request, recaptcha_token: Optional[str]):
+    async def _verify_recaptcha_token(self, request: Request, recaptcha_token: Optional[str]):
+        if config['IS_LOAD_TESTING']:
+            return
+
         verify_endpoint = config['RECAPTCHA_VERIFY_URL']
         recaptcha_secret = config['RECAPTCHA_SECRET']
 
@@ -67,10 +70,11 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
             },
         )
         response_data = await response.json()
-        logger.info(f'{request} captcha verified, response is: {response.status} {response_data}')
+        # we expect a response like:
+        # {'success': True, 'challenge_ts': '2022-01-05T22:23:42Z', 'hostname': 'local.liminus'}
 
-        if not response_data['success']:
-            raise self._invalid_recaptcha_response(request, 'Captcha token was invalid')
+        if not response_data.get('success'):
+            raise self._invalid_recaptcha_response(request, f'Captcha verify failed: {response_data}')
 
     def _invalid_recaptcha_response(self, request: Request, details: str) -> ErrorResponse:
         error = f'{request} failing due to invalid recaptcha: {details}'

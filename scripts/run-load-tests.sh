@@ -16,6 +16,7 @@ cat .env.template \
     | sed 's/BASEURL_FOR_SAML_REDIRECT=.*/BASEURL_FOR_SAML_REDIRECT=/g' \
     | sed 's/LOG_LEVEL=.*/LOG_LEVEL=INFO/g' \
     | sed 's/DEBUG=.*/DEBUG=False/g' \
+    | sed 's/IS_LOAD_TESTING=.*/IS_LOAD_TESTING=True/g' \
     > locust-load-test/.env
 
 PROJECT="liminus-local" docker-compose \
@@ -55,7 +56,7 @@ docker run \
     --name="$CONTAINER_NAME" \
     -v "$PWD/locust-load-test/:/etc/locust/" \
     --rm \
-    $IMAGE_NAME -f /etc/locust/locustfile.py --headless -u 1 -r 10 --run-time "$RUN_TIME" --stop-timeout 30 -H ${TARGET_HOST}
+    $IMAGE_NAME -f /etc/locust/locustfile.py --headless -u 7 -r 10 --run-time "$RUN_TIME" --stop-timeout 30 -H ${TARGET_HOST}
 
 result=$?
 
@@ -66,12 +67,12 @@ else
  >&2 echo "Load tests failed."
 fi
 
-PROJECT=$PROJECT docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.local.yml \
-    -f docker-compose.loadtest.yml \
-    --project-name "$PROJECT" \
-    logs --follow --tail 100
+# PROJECT=$PROJECT docker-compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.local.yml \
+#     -f docker-compose.loadtest.yml \
+#     --project-name "$PROJECT" \
+#     logs --follow --tail 100
 
 docker-compose \
     -f docker-compose.yml \

@@ -1,13 +1,14 @@
 from http import HTTPStatus
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
 from liminus.backends import valid_backends
-from liminus.base.backend import Backend, ListenPathSettings, ReqSettings
+from liminus.base.backend import Backend, ListenPathSettings, ReqSettings, RouteSettings
 from liminus.base.middleware import GkRequestMiddleware
+from liminus.constants import Headers
 from liminus.errors import ErrorResponse
 from liminus.settings import config, logger
 
@@ -27,7 +28,6 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
 
             # run the pre-request hooks
             for mw in backend.middleware_instances:
-                # logger.debug(f'{request} running {mw}.handle_request()')
                 early_response = await mw.handle_request(request, settings, backend)
                 if early_response and isinstance(early_response, Response):
                     logger.debug(f'{request} {mw}.handle_request() returned early response {early_response}')
@@ -38,7 +38,6 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
 
             # run the post-response hooks
             for mw in backend.middleware_instances:
-                # logger.debug(f'{request} running {mw}.handle_response()')
                 replacement_response = await mw.handle_response(
                     response,
                     request,
@@ -81,19 +80,36 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
         #  1. exact path match
         #  2. regex path match
         #  3. listener
+        route_wrong_method: Optional[RouteSettings] = None
         for route in backend.routes:
-            if route.route_exactly_matches(request.url.path, request.method):
-                return route
+            if route.route_exactly_matches(request.url.path):
+                if route.method_matches(request.method):
+                    return route
+                else:
+                    route_wrong_method = route
 
         for route in backend.routes:
-            if route.route_matches(request.url.path, request.method):
-                return route
+            if route.route_matches(request.url.path):
+                if route.method_matches(request.method):
+                    return route
+                else:
+                    route_wrong_method = route_wrong_method or route
 
         # if this request does not match any routes, it means we do not proceed
-        msg = (
-            f'{request}: Backend {backend} has no route to proxy {request.method} {request.url.path}'
-            if config['DEBUG']
-            else ''
-        )
-        response = PlainTextResponse(msg, HTTPStatus.NOT_FOUND)
+        response_message = ''
+        if config['DEBUG']:
+            response_message = f'{request}: Backend {backend} has no route to proxy {request.method} {request.url.path}'
+            if route_wrong_method:
+                response_message += (
+                    f', route {route_wrong_method} matches path but only supports '
+                    f'methods {route_wrong_method.allow_methods}'
+                )
+
+        if route_wrong_method:
+            response = PlainTextResponse(response_message, HTTPStatus.METHOD_NOT_ALLOWED, headers={
+                Headers.ALLOW: ','.join(list(route_wrong_method.allow_methods))
+            })
+        else:
+            response = PlainTextResponse(response_message, HTTPStatus.NOT_FOUND)
+
         raise ErrorResponse(response)

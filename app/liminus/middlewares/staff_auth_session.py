@@ -48,7 +48,7 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
 
         request_requires_staff_auth = self._is_staff_authn_required(settings)
         if request_requires_staff_auth and not staff_jwt:
-            logger.debug('{req} requires staff auth but none yet present, redirecting to SAML login flow')
+            logger.debug(f'{req} requires staff auth but none yet present, redirecting to SAML login flow')
             return self._redirect_to_staff_auth_login(req)
 
     async def handle_response(self, res: Response, req: Request, settings: ReqSettings, backend: Backend):
@@ -74,7 +74,9 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
     def _redirect_to_staff_auth_login(self, request: Request) -> Response:
         # redirect this request to our Auth Service login init
         # with the initially requested URL as a param, so the user ends up at the right place
-        redirect_params = '?' + urlencode({'url': request.url})
+        after_login = request.url  # .replace(scheme='https')
+        logger.info(f'_redirect_to_staff_auth_login {after_login}')
+        redirect_params = '?' + urlencode({'url': after_login})
         login_redirect_url = self.STAFF_AUTH_INIT_REDIRECT_LOGIN_URL + redirect_params
 
         return RedirectResponse(login_redirect_url, 302)

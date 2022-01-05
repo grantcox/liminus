@@ -7,6 +7,7 @@ from liminus.backends.petitions_service import petitions_service_backend
 from liminus.backends.stats_service import stats_service_backend
 from liminus.backends.web_act import web_act_backend
 from liminus.backends.admin import admin_backend
+from liminus.settings import config
 
 
 all_backends = [
@@ -20,4 +21,9 @@ all_backends = [
     web_act_backend,
     admin_backend,
 ]
-valid_backends = [be for be in all_backends if be is not None]
+valid_backends = [be for be in all_backends if be.name in config['ENABLED_BACKENDS']]
+
+for be in valid_backends:
+    be.init()
+
+__all__ = ['valid_backends']

@@ -1,5 +1,4 @@
 import logging
-from secrets import token_hex
 
 import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
@@ -65,8 +64,8 @@ def monkey_patch_starlette_request_tostring():
     def monkey_request_str(self: Request) -> str:
         # the request id doesn't need to be globally unique, just for concurrent requests
         # and we don't want huge identifiers in logs
-        if not self.scope.get('request_id'):
-            self.scope['request_id'] = token_hex(4)
-        return f"req={self.scope['request_id']}"
+        if self.scope.get('request_id'):
+            return f"req={self.scope['request_id']}"
+        return f'req={self.url.path}'
 
     Request.__str__ = monkey_request_str

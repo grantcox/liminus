@@ -6,9 +6,12 @@ class Headers:
     CONNECTING_IP_NORMALIZED = 'connecting-ip-normalized'
     RECAPTCHA_TOKEN = 'recaptcha-token'
 
+    ALLOW = 'allow'
+    AUTHORIZATION = 'authorization'
     CLOUDFLARE_CONNECTING_IP = 'cf-connecting-ip'
     X_FORWARDED_FOR = 'x-forwarded-for'
     X_REQUESTED_WITH = 'x-requested-with'
+    X_REQUEST_ID = 'x-request-id'
 
     REQUEST_DEFAULT_ALLOW = {
         'accept-encoding',
