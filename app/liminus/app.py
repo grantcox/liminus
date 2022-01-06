@@ -15,6 +15,12 @@ from liminus.middlewares.cors import CorsMiddleware
 from liminus.middlewares.request_logging import RequestLoggingMiddleware
 from liminus.proxy_request import proxy_request_to_backend
 from liminus.settings import config
+from liminus.background_tasks import complete_all_background_tasks
+
+
+async def on_app_shutdown():
+    # finish all running background coroutines
+    await complete_all_background_tasks(timeout=10)
 
 
 def create_app():
@@ -41,7 +47,7 @@ def create_app():
         Middleware(GatekeeperMiddlewareRunner),
     ]
 
-    app = Starlette(routes=routes, middleware=middlewares)
+    app = Starlette(routes=routes, middleware=middlewares, on_shutdown=[on_app_shutdown])
     return app
 
 

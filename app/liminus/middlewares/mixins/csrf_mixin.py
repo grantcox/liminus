@@ -1,9 +1,11 @@
+import asyncio
 from http import HTTPStatus
 from secrets import token_urlsafe
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from liminus.background_tasks import run_background_task
 from liminus.base.backend import ReqSettings
 from liminus.errors import ErrorResponse
 from liminus.middlewares.mixins.redis_mixin import RedisHandlerMixin
@@ -27,7 +29,7 @@ class CsrfHandlerMixin(RedisHandlerMixin):
             # but Tyk only allows a single 'Set-Cookie' header per response,
             # so it could conflict with the session cookie
             new_csrf_token = token_urlsafe(32)
-            await self._add_new_csrf(session_id, new_csrf_token)
+            await self._store_new_csrf(session_id, new_csrf_token)
             response.headers[self.CSRF_HEADER_NAME] = new_csrf_token
 
     async def _verify_csrf_if_needed(self, request: Request, session_id: str, settings: ReqSettings) -> bool:
@@ -40,7 +42,7 @@ class CsrfHandlerMixin(RedisHandlerMixin):
             return True
 
         csrf_token_from_header = request.headers.get(self.CSRF_HEADER_NAME, '')
-        if await self._is_valid_current_csrf(session_id, csrf_token_from_header):
+        if await self._is_valid_csrf(session_id, csrf_token_from_header):
             # a valid CSRF token was provided in the request headers
 
             if settings.csrf.single_use:
@@ -52,11 +54,6 @@ class CsrfHandlerMixin(RedisHandlerMixin):
 
             return True
 
-        if await self._is_just_used_csrf(session_id, csrf_token_from_header):
-            # this CSRF token has already been consumed, but very recently (probably from a concurrent request)
-            # let this request go through, but we will not attach a fresh CSRF to this response
-            return True
-
         if config['IS_LOAD_TESTING']:
             # when load testing we check the redis keys, but don't actually fail out
             return True
@@ -65,7 +62,7 @@ class CsrfHandlerMixin(RedisHandlerMixin):
         logger.info(f'{request} does not have expected CSRF token, failing out')
         # if we're failing due to an invalid CSRF token, we should also give them a new one
         new_csrf_token = token_urlsafe(32)
-        await self._add_new_csrf(session_id, new_csrf_token)
+        await self._store_new_csrf(session_id, new_csrf_token)
         error_response = JSONResponse(
             {'error': 'Invalid CSRF Token'},
             status_code=HTTPStatus.UNAUTHORIZED,
@@ -74,39 +71,28 @@ class CsrfHandlerMixin(RedisHandlerMixin):
 
         raise ErrorResponse(error_response)
 
-    async def _add_new_csrf(self, session_id: str, new_csrf_token: str):
+    async def _store_new_csrf(self, session_id: str, new_csrf_token: str):
         # add a new token to this session's valid list
-        valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
-
-        await self.redis_client.lpush(valid_keys_key, new_csrf_token)
-        # ensure we only allow 3 concurrent CSRF tokens
-        await self.redis_client.ltrim(valid_keys_key, start=0, end=2)
+        cache_key = self._get_csrf_cache_key(session_id, new_csrf_token)
+        await self.redis_client.set(cache_key, '1')
 
     async def _consume_csrf(self, session_id: str, csrf_token: str):
-        # remove the CSRF from the valid list, and put it in a key with very short TTL for concurrent requests
-        # add the 'just used' first, so there is no possible race condition where the CSRF is missing
-        just_used_key = self._get_just_used_csrf_cache_key(session_id, csrf_token)
-        await self.redis_client.setex(just_used_key, self.CSRF_REUSE_GRACE_TTL_SECONDS, 'used')
+        cache_key = self._get_csrf_cache_key(session_id, csrf_token)
+        await self.redis_client.expire(cache_key, self.CSRF_REUSE_GRACE_TTL_SECONDS)
+        run_background_task(self._delete_csrf_after_grace_delay(cache_key))
 
-        # delete this key from the list of unused keys
-        valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
-        await self.redis_client.lrem(valid_keys_key, count=0, value=csrf_token)
+    async def _delete_csrf_after_grace_delay(self, cache_key: str):
+        await asyncio.sleep(self.CSRF_REUSE_GRACE_TTL_SECONDS)
+        logger.info(f'deleting CSRF token after delay: {cache_key}')
+        await self.redis_client.delete(cache_key)
 
-    async def _is_valid_current_csrf(self, session_id: str, csrf_token: str) -> bool:
+    async def _is_valid_csrf(self, session_id: str, csrf_token: str) -> bool:
         if not csrf_token:
             return False
 
-        valid_keys_key = self._get_valid_csrfs_cache_key(session_id)
-        valid_keys = await self.redis_client.lrange(valid_keys_key, 0, 3)
-        return bytes(csrf_token, 'utf-8') in valid_keys
+        cache_key = self._get_csrf_cache_key(session_id, csrf_token)
+        value = await self.redis_client.get(cache_key)
+        return (value is not None)
 
-    async def _is_just_used_csrf(self, session_id: str, csrf_token: str) -> bool:
-        just_used_key = self._get_just_used_csrf_cache_key(session_id, csrf_token)
-        just_used = await self.redis_client.get(just_used_key)
-        return just_used == b'used'
-
-    def _get_valid_csrfs_cache_key(self, session_id: str) -> str:
-        return get_cache_hash_key('valid-csrfs-', session_id)
-
-    def _get_just_used_csrf_cache_key(self, session_id: str, csrf_token: str) -> str:
-        return get_cache_hash_key('just_used-csrf-', f'{session_id}-{csrf_token}')
+    def _get_csrf_cache_key(self, session_id: str, csrf_token: str) -> str:
+        return get_cache_hash_key('csrf-', f'{session_id}-{csrf_token}')
