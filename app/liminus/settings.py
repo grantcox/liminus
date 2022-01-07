@@ -57,13 +57,11 @@ STAFF_SESSION_COOKIE_NAME = env('STAFF_SESSION_COOKIE_NAME')
 STAFF_SESSION_COOKIE_DOMAIN = env('STAFF_SESSION_COOKIE_DOMAIN')
 STAFF_SESSION_IDLE_TIMEOUT_SECONDS = to_seconds(minutes=30)
 STAFF_SESSION_STRICT_MAX_LIFETIME_SECONDS = to_seconds(hours=12)
-STAFF_AUTH_INIT_REDIRECT_LOGIN_URL = url_join(
-    env('BASEURL_FOR_SAML_REDIRECT'), '/auth-service/staff/saml/init'
-)
+STAFF_AUTH_INIT_URL = url_join(BACKEND_AUTH_SERVICE_DSN, '/staff/saml/init')
 
 # Staff auth JWT verification / refreshing
 STAFF_AUTH_JWKS_URL = url_join(BACKEND_AUTH_SERVICE_DSN, '/jwks')
-STAFF_AUTH_JWT_REFRESH_URL = url_join(BACKEND_AUTH_SERVICE_DSN, '/internal/staff/jwt/refresh')
+STAFF_AUTH_JWT_REFRESH_URL = url_join(BACKEND_AUTH_SERVICE_DSN, '/staff/jwt/refresh')
 STAFF_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS = to_seconds(minutes=30)
 
 # Public / member session settings

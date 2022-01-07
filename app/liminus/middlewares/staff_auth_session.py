@@ -1,10 +1,11 @@
 from starlette.requests import Request
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import Response
 
 from liminus import settings
 from liminus.base.backend import Backend, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.middlewares.mixins.jwt_mixin import JwtHandlerMixin
+from liminus.proxy_request import request_to_backend
 
 
 logger = settings.logger
@@ -30,7 +31,7 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
     REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS = settings.STAFF_AUTH_JWT_REFRESH_IF_TTL_LESS_THAN_SECONDS
     REFRESH_JWT_SEMAPHORE_TTL_SECONDS = 10
 
-    STAFF_AUTH_INIT_REDIRECT_LOGIN_URL = settings.STAFF_AUTH_INIT_REDIRECT_LOGIN_URL
+    STAFF_AUTH_INIT_URL = settings.STAFF_AUTH_INIT_URL
 
     async def handle_request(self, req: Request, reqset: ReqSettings, backend: Backend):
         # if they already have a valid session, pull the session data
@@ -49,9 +50,8 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
 
         request_requires_staff_auth = self._is_staff_authn_required(reqset)
         if request_requires_staff_auth and not staff_jwt:
-            logger.debug(f'{req} requires staff auth but none yet present, redirecting to SAML login flow')
-            # TODO: just make a sub-request to the Auth Service, and return that response
-            return self._redirect_to_staff_auth_login(req)
+            logger.debug(f'{req} requires staff auth but none yet present, starting SAML login flow')
+            return await self._forward_to_staff_auth_login(req)
 
     async def handle_response(self, res: Response, req: Request, reqset: ReqSettings, backend: Backend):
         session, is_new_session = await self._ensure_session(req)
@@ -73,10 +73,10 @@ class StaffAuthSessionMiddleware(GkRequestMiddleware, JwtHandlerMixin):
 
         return True
 
-    def _redirect_to_staff_auth_login(self, request: Request) -> Response:
+    async def _forward_to_staff_auth_login(self, request: Request) -> Response:
         # redirect this request to our Auth Service login init
         # with the initially requested URL as a param, so the user ends up at the right place
         after_login = request.url.replace(scheme='https')
-        login_redirect_url = self.STAFF_AUTH_INIT_REDIRECT_LOGIN_URL.include_query_params(url=after_login)
+        staff_login_url = self.STAFF_AUTH_INIT_URL.include_query_params(url=after_login)
 
-        return RedirectResponse(str(login_redirect_url), 302)
+        return await request_to_backend(request, method='GET', url=staff_login_url)

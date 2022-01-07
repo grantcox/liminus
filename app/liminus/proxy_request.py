@@ -16,47 +16,54 @@ logger = logging.getLogger('gk-py-proxy')
 aiohttp_session = None
 
 
-async def get_aiohttp_session() -> ClientSession:
-    global aiohttp_session
-    if aiohttp_session is None:
-        aiohttp_session = ClientSession()
-    return aiohttp_session
-
-
 async def http_request(method: str, url: Union[str, URL], timeout: int = 10, **kwargs) -> ClientResponse:
+    """
+    This function is for making ad-hoc HTTP requests to other resources, eg to verify Recaptcha
+    """
     return await aiohttp_request(method=method, url=url, timeout=ClientTimeout(total=timeout), **kwargs)
 
 
-async def aiohttp_request(**kwargs) -> ClientResponse:
-    session = await get_aiohttp_session()
-    # we need to convert the URL to a string for aoihttp, but we do this after any printing
-    # so that secrets will be exposed for as short as possible
-    kwargs['url'] = str(kwargs['url'])
-    # logger.debug(f'aiohttp_request: {kwargs}')
-    return await session.request(**kwargs)
-
-
 async def proxy_request_to_backend(request: Request) -> Response:
+    """
+    This function is the main Gatekeeper proxying function, sending a request
+    that has gone through all our middlewares to a backend
+    """
     backend_request_params = await construct_backend_request_params(request)
-    backend_request_params['timeout'] = ClientTimeout(total=backend_request_params['timeout'])
 
-    logger.debug(f'{request} proxying to backend {backend_request_params["url"]}')
+    return await request_to_backend(request, **backend_request_params)
+
+
+async def request_to_backend(source_request: Request, **backend_request_params) -> Response:
+    """
+    This function is for making sub-requests to a backend, eg when a request requiring staff
+    auth is sent to the Auth Service instead of the normal routing backend
+    """
+    if 'timeout' in backend_request_params and isinstance(backend_request_params['timeout'], int):
+        backend_request_params['timeout'] = ClientTimeout(total=backend_request_params['timeout'])
+
+    logger.debug(f'{source_request} proxying to backend {backend_request_params["url"]}')
 
     backend_response: ClientResponse = await aiohttp_request(allow_redirects=False, **backend_request_params)
 
-    response_log = f'{request} backend responded with HTTP {backend_response.status}'
+    response_log = f'{source_request} backend responded with HTTP {backend_response.status}'
     if 300 <= backend_response.status <= 308:
         # it's a redirection
         response_log += f' to {backend_response.headers.get("location")}'
     logger.debug(response_log)
 
+    starlette_response = await convert_aiohttp_reponse_to_starlette(backend_response)
+
+    return starlette_response
+
+
+async def convert_aiohttp_reponse_to_starlette(aiohttp_reponse: ClientResponse) -> Response:
     # starlette.Response constructor only accepts a header dict, not multidict
     # but after creation it becomes a multidict, and we can call .append()
     response = Response(
-        content=await backend_response.content.read(),
-        status_code=backend_response.status,
+        content=await aiohttp_reponse.content.read(),
+        status_code=aiohttp_reponse.status,
     )
-    for k, v in backend_response.headers.items():
+    for k, v in aiohttp_reponse.headers.items():
         response.headers.append(k, v)
 
     return response
@@ -131,3 +138,19 @@ async def construct_backend_request_params(request: Request) -> Dict:
                 backend_request_params['data'] = backend_form
 
     return backend_request_params
+
+
+async def get_aiohttp_session() -> ClientSession:
+    global aiohttp_session
+    if aiohttp_session is None:
+        aiohttp_session = ClientSession()
+    return aiohttp_session
+
+
+async def aiohttp_request(**kwargs) -> ClientResponse:
+    session = await get_aiohttp_session()
+    # we need to convert the URL to a string for aoihttp, but we do this after any printing
+    # so that secrets will be exposed for as short as possible
+    kwargs['url'] = str(kwargs['url'])
+    # logger.debug(f'aiohttp_request: {kwargs}')
+    return await session.request(**kwargs)
