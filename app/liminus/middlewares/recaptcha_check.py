@@ -5,21 +5,24 @@ from urllib.parse import parse_qsl
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from liminus import settings
 from liminus.base.backend import Backend, RecaptchaEnabled, ReqSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.campaign_settings import CampaignSettingsProvider
 from liminus.constants import Headers
 from liminus.errors import ErrorResponse
 from liminus.proxy_request import http_request
-from liminus.settings import config, logger
 from liminus.utils import php_bool
+
+
+logger = settings.logger
 
 
 class RecaptchaCheckMiddleware(GkRequestMiddleware):
     campaign_settings: CampaignSettingsProvider = CampaignSettingsProvider()
 
-    async def handle_request(self, req: Request, settings: ReqSettings, backend: Backend):
-        if not settings.recaptcha or settings.recaptcha.enabled == RecaptchaEnabled.DISABLED:
+    async def handle_request(self, req: Request, reqset: ReqSettings, backend: Backend):
+        if not reqset.recaptcha or reqset.recaptcha.enabled == RecaptchaEnabled.DISABLED:
             # nothing to check for this request
             return
 
@@ -30,7 +33,7 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
 
         # no captcha was provided
         # that's ok if it's campaign dependent and this campaign id does not require one
-        if settings.recaptcha.enabled == RecaptchaEnabled.CAMPAIGN_SETTING:
+        if reqset.recaptcha.enabled == RecaptchaEnabled.CAMPAIGN_SETTING:
             self._raise_if_campaign_requires_captcha(req)
 
         else:
@@ -55,11 +58,8 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
             )
 
     async def _verify_recaptcha_token(self, request: Request, recaptcha_token: Optional[str]):
-        if config['IS_LOAD_TESTING']:
-            return
-
-        verify_endpoint = config['RECAPTCHA_VERIFY_URL']
-        recaptcha_secret = config['RECAPTCHA_SECRET']
+        verify_endpoint = settings.RECAPTCHA_VERIFY_URL
+        recaptcha_secret = settings.RECAPTCHA_SECRET
 
         response = await http_request(
             'POST',
@@ -80,6 +80,6 @@ class RecaptchaCheckMiddleware(GkRequestMiddleware):
         error = f'{request} failing due to invalid recaptcha: {details}'
         logger.info(error)
 
-        response_text = error if config['DEBUG'] else 'Invalid captcha token'
+        response_text = error if settings.DEBUG else 'Invalid captcha token'
         response = JSONResponse({'error': response_text}, HTTPStatus.UNAUTHORIZED)
         return ErrorResponse(response)

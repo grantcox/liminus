@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import aiomysql
 import phpserialize
 
-from liminus.settings import config
+from liminus import settings
 
 
 @dataclass
@@ -21,12 +21,9 @@ class CampaignSettingsProvider:
     campaign_settings_cache: Dict[int, CampaignSettingsCache]
 
     def __init__(self):
-        self.db_dsn = config['READONLY_DATABASE_DSN']
-        if not self.db_dsn:
-            raise EnvironmentError('No READONLY_DATABASE_DSN variable defined')
-
+        self.db_dsn = settings.READONLY_DATABASE_DSN
+        self.cache_time = settings.CAMPAIGN_SETTINGS_CACHE_EXPIRY_SECONDS
         self.campaign_settings_cache = {}
-        self.cache_time = config['CAMPAIGN_SETTINGS_CACHE_EXPIRY_SECONDS']
 
     async def get_campaign_settings(self, campaign_id: int) -> Optional[dict]:
         now = time()

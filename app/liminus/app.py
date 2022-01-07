@@ -1,4 +1,5 @@
 import logging
+import logging.config
 
 import sentry_sdk
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
@@ -9,18 +10,12 @@ from starlette.requests import Request
 from starlette.routing import Route
 from starlette_early_data import EarlyDataMiddleware
 
-from liminus import health_check
+from liminus import health_check, settings
+from liminus.background_tasks import complete_all_background_tasks
 from liminus.middleware_runner import GatekeeperMiddlewareRunner
 from liminus.middlewares.cors import CorsMiddleware
 from liminus.middlewares.request_logging import RequestLoggingMiddleware
 from liminus.proxy_request import proxy_request_to_backend
-from liminus.settings import config
-from liminus.background_tasks import complete_all_background_tasks
-
-
-async def on_app_shutdown():
-    # finish all running background coroutines
-    await complete_all_background_tasks(timeout=10)
 
 
 def create_app():
@@ -42,12 +37,16 @@ def create_app():
         Middleware(RequestLoggingMiddleware),
         Middleware(SentryAsgiMiddleware),
         Middleware(GZipMiddleware),
-        Middleware(CorsMiddleware, **config['CORSMiddleware_args']),
+        Middleware(CorsMiddleware, **settings.CORS_MIDDLEWARE_ARGS),
         Middleware(EarlyDataMiddleware, deny_all=True),
         Middleware(GatekeeperMiddlewareRunner),
     ]
 
-    app = Starlette(routes=routes, middleware=middlewares, on_shutdown=[on_app_shutdown])
+    async def on_app_shutdown():
+        # finish all running background coroutines
+        await complete_all_background_tasks(timeout=10)
+
+    app = Starlette(routes=routes, middleware=middlewares, on_shutdown=[on_app_shutdown], debug=settings.DEBUG)
     return app
 
 
@@ -60,9 +59,9 @@ def configure_logging():
 
     # python warnings should be logged
     logging.captureWarnings(True)
-    logging.config.dictConfig(config['LOGGING_CONFIG'])
+    logging.config.dictConfig(settings.LOGGING_CONFIG)
 
-    sentry_sdk.init(dsn=config['SENTRY_DSN'])
+    sentry_sdk.init(dsn=str(settings.SENTRY_DSN))
 
 
 def monkey_patch_starlette_request_tostring():

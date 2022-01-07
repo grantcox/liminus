@@ -5,12 +5,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
+from liminus import settings
 from liminus.backends import valid_backends
 from liminus.base.backend import Backend, ListenPathSettings, ReqSettings, RouteSettings
 from liminus.base.middleware import GkRequestMiddleware
 from liminus.constants import Headers
 from liminus.errors import ErrorResponse
-from liminus.settings import config, logger
+
+
+logger = settings.logger
 
 
 class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
@@ -20,15 +23,15 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
         try:
             # go through all our backends, find the first that match this request path (no url params)
             backend, listener = self._get_matching_backend_and_listener(request)
-            settings = self._get_req_settings(request, backend, listener)
+            reqset = self._get_req_settings(request, backend, listener)
             logger.debug(f'{request} found matching backend: {backend}')
 
             # add all relevant backend details to this request state
-            self._augment_request_scope(request, backend, listener, settings)
+            self._augment_request_scope(request, backend, listener, reqset)
 
             # run the pre-request hooks
             for mw in backend.middleware_instances:
-                early_response = await mw.handle_request(request, settings, backend)
+                early_response = await mw.handle_request(request, reqset, backend)
                 if early_response and isinstance(early_response, Response):
                     logger.debug(f'{request} {mw}.handle_request() returned early response {early_response}')
                     return early_response
@@ -41,7 +44,7 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
                 replacement_response = await mw.handle_response(
                     response,
                     request,
-                    settings,
+                    reqset,
                     backend,
                 )
                 if replacement_response and isinstance(replacement_response, Response):
@@ -60,16 +63,16 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
                 return (be, be.listen)
 
         # if there are no matching backends, return a 404
-        msg = f'{request}: No backend found to proxy {request.url.path}' if config['DEBUG'] else ''
+        msg = f'{request}: No backend found to proxy {request.url.path}' if settings.DEBUG else ''
         response = PlainTextResponse(msg, HTTPStatus.NOT_FOUND)
         raise ErrorResponse(response)
 
     def _augment_request_scope(
-        self, request: Request, backend: Backend, listener: ListenPathSettings, settings: ReqSettings
+        self, request: Request, backend: Backend, listener: ListenPathSettings, reqset: ReqSettings
     ):
         request.scope['backend'] = backend
         request.scope['backend_listener'] = listener
-        request.scope['backend_per_request_settings'] = settings
+        request.scope['backend_per_request_settings'] = reqset
         request.state.headers = request.headers.mutablecopy()
 
         # and every request through GK gets a special header indicating that
@@ -97,7 +100,7 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
 
         # if this request does not match any routes, it means we do not proceed
         response_message = ''
-        if config['DEBUG']:
+        if settings.DEBUG:
             response_message = f'{request}: Backend {backend} has no route to proxy {request.method} {request.url.path}'
             if route_wrong_method:
                 response_message += (
@@ -106,9 +109,11 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
                 )
 
         if route_wrong_method:
-            response = PlainTextResponse(response_message, HTTPStatus.METHOD_NOT_ALLOWED, headers={
-                Headers.ALLOW: ','.join(list(route_wrong_method.allow_methods))
-            })
+            response = PlainTextResponse(
+                response_message,
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                headers={Headers.ALLOW: ','.join(list(route_wrong_method.allow_methods))},
+            )
         else:
             response = PlainTextResponse(response_message, HTTPStatus.NOT_FOUND)
 

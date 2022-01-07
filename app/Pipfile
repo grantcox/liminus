@@ -17,8 +17,10 @@ starlette_early_data = "*"
 uvicorn = "*"
 
 [dev-packages]
+aioresponses = "*"
 black = "==21.12b0"
 coverage = "*"
+fakeredis = "*"
 flake8 = "*"
 flake8-quotes = "*"
 isort = "*"

@@ -13,13 +13,14 @@ fi
 
 cat .env.template \
     | sed 's/_DSN=http.*/_DSN=http:\/\/liminus-echo:5000/g' \
+    | sed 's/RECAPTCHA_VERIFY_URL=.*/RECAPTCHA_VERIFY_URL=http:\/\/liminus-echo:5000\/recaptcha\/api\/siteverify/g' \
     | sed 's/BASEURL_FOR_SAML_REDIRECT=.*/BASEURL_FOR_SAML_REDIRECT=/g' \
     | sed 's/LOG_LEVEL=.*/LOG_LEVEL=INFO/g' \
     | sed 's/DEBUG=.*/DEBUG=False/g' \
     | sed 's/IS_LOAD_TESTING=.*/IS_LOAD_TESTING=True/g' \
-    > locust-load-test/.env
+    > .env.locust
 
-PROJECT="liminus-local" docker-compose \
+PROJECT=$PROJECT docker-compose \
     -f docker-compose.yml \
     -f docker-compose.local.yml \
     -f docker-compose.loadtest.yml \
@@ -47,16 +48,16 @@ if [[ -z $TARGET_HOST ]]; then
     TARGET_HOST=https://host.docker.internal:8091
 fi
 
-IMAGE_NAME="$DOCKER_REGISTRY/avaaz/locust"
+IMAGE_NAME="locust:latest"
 RUN_TIME="0h0m30s"
 
 echo "Running load tests against host $TARGET_HOST for $RUN_TIME"
 docker run \
     --env PYTHONDONTWRITEBYTECODE=1 \
     --name="$CONTAINER_NAME" \
-    -v "$PWD/locust-load-test/:/etc/locust/" \
+    -v "$PWD/app/tests/load-test/:/etc/locust/" \
     --rm \
-    $IMAGE_NAME -f /etc/locust/locustfile.py --headless -u 7 -r 10 --run-time "$RUN_TIME" --stop-timeout 30 -H ${TARGET_HOST}
+    $IMAGE_NAME -f /etc/locust/locustfile.py --headless -u 7 -r 1 --run-time "$RUN_TIME" --stop-timeout 30 -H ${TARGET_HOST}
 
 result=$?
 

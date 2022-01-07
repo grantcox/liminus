@@ -1,5 +1,6 @@
 import re
 
+from liminus import settings
 from liminus.base.backend import (
     Backend,
     CsrfSettings,
@@ -14,16 +15,15 @@ from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
 from liminus.middlewares.public_session_csrf_jwt import PublicSessionMiddleware
 from liminus.middlewares.recaptcha_check import RecaptchaCheckMiddleware
 from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
-from liminus.settings import config
 
 
 donation_service_backend = Backend(
     name='donations',
     listen=ListenPathSettings(
         prefix='/donation/',
-        upstream_dsn=config['BACKEND_DONATIONS_DSN'],
+        upstream_dsn=settings.BACKEND_DONATIONS_DSN,
         strip_prefix=True,
-        extra_headers=[(Headers.AUTHORIZATION, f'JWT {config["BACKEND_DONATIONS_SERVICE_AUTH_JWT"]}')],
+        extra_headers=[(Headers.AUTHORIZATION, f'JWT {str(settings.BACKEND_DONATIONS_SERVICE_AUTH_JWT)}')],
     ),
     csrf=CsrfSettings(require_token=True, single_use=True),
     allowed_request_headers=HeadersAllowedSettings(

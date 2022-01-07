@@ -1,4 +1,5 @@
 import asyncio
+
 from liminus.settings import logger
 
 
@@ -19,10 +20,7 @@ def trim_tasklist():
     global _background_tasks
 
     # clean up old tasks
-    _background_tasks = [
-        t for t in _background_tasks
-        if not t.done()
-    ]
+    _background_tasks = [t for t in _background_tasks if not t.done()]
 
 
 async def complete_all_background_tasks(timeout: int):

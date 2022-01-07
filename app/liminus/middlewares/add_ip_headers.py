@@ -7,7 +7,7 @@ from liminus.utils import normalize_ip_address
 
 
 class AddIpHeadersMiddleware(GkRequestMiddleware):
-    async def handle_request(self, req: Request, settings: ReqSettings, backend: Backend):
+    async def handle_request(self, req: Request, reqset: ReqSettings, backend: Backend):
         # for geo-ip purposes we trust the x-forwarded-for
         # for security purposes we do not trust that, and we use the IP that connected to CloudFlare
         xff = req.headers.get(Headers.X_FORWARDED_FOR, '')

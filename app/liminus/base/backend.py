@@ -3,9 +3,10 @@ from enum import Enum
 from typing import Any, List, Optional, Pattern, Set, Tuple, Type
 
 from pydantic import BaseModel
+from starlette.datastructures import URL
 
 from liminus.constants import Headers, HttpMethods
-from liminus.utils import strip_path_prefix
+from liminus.utils import strip_path_prefix, url_join
 
 
 class AuthSettings(BaseModel):
@@ -70,10 +71,14 @@ class PathRewrites(BaseModel):
 class ListenPathSettings(ReqSettings):
     prefix: Optional[str] = None
     path_regex: Optional[Pattern] = None
-    upstream_dsn: str = ''
+    upstream_dsn: Optional[URL] = None
     strip_prefix: bool = True
     rewrites: List[PathRewrites] = []
     extra_headers: List[Tuple[str, str]] = []
+
+    # pydantic needs this to allow a "URL" type
+    class Config:
+        arbitrary_types_allowed = True
 
     def matches_path(self, request_path: str) -> bool:
         if self.prefix and request_path.startswith(self.prefix):
@@ -84,13 +89,16 @@ class ListenPathSettings(ReqSettings):
 
         return False
 
-    def get_upstream_url(self, request_path: str) -> str:
+    def get_upstream_url(self, request_path: str) -> URL:
+        if not self.upstream_dsn:
+            raise AttributeError('Cannot generate upstream URL with no upstream DSN')
+
         upstream_path = request_path
         for rewrite in self.rewrites:
             upstream_path = rewrite.rewrite_path(upstream_path)
         if self.strip_prefix:
             upstream_path = strip_path_prefix(request_path, self.prefix, self.path_regex)
-        return self.upstream_dsn.rstrip('/') + '/' + upstream_path.lstrip('/')
+        return url_join(self.upstream_dsn, upstream_path)
 
 
 class RouteSettings(ReqSettings):

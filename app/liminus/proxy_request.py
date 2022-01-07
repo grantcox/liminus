@@ -1,29 +1,39 @@
+import logging
 from json import JSONDecodeError
-from typing import Dict
+from typing import Dict, Union
+from urllib.parse import parse_qsl
 
 from aiohttp import ClientResponse, ClientSession, ClientTimeout, FormData
-from starlette.datastructures import MutableHeaders, UploadFile
+from starlette.datastructures import URL, MultiDict, MutableHeaders, UploadFile
 from starlette.requests import Request
 from starlette.responses import Response
 
 from liminus.base.backend import ListenPathSettings, ReqSettings
 from liminus.constants import Headers
-from liminus.settings import logger
 
 
+logger = logging.getLogger('gk-py-proxy')
 aiohttp_session = None
 
 
-async def get_aiohttp_session():
+async def get_aiohttp_session() -> ClientSession:
     global aiohttp_session
     if aiohttp_session is None:
         aiohttp_session = ClientSession()
     return aiohttp_session
 
 
-async def http_request(method: str, url: str, timeout: int = 10, **kwargs) -> ClientResponse:
+async def http_request(method: str, url: Union[str, URL], timeout: int = 10, **kwargs) -> ClientResponse:
+    return await aiohttp_request(method=method, url=url, timeout=ClientTimeout(total=timeout), **kwargs)
+
+
+async def aiohttp_request(**kwargs) -> ClientResponse:
     session = await get_aiohttp_session()
-    return await session.request(method=method, url=url, timeout=ClientTimeout(total=timeout), **kwargs)
+    # we need to convert the URL to a string for aoihttp, but we do this after any printing
+    # so that secrets will be exposed for as short as possible
+    kwargs['url'] = str(kwargs['url'])
+    # logger.debug(f'aiohttp_request: {kwargs}')
+    return await session.request(**kwargs)
 
 
 async def proxy_request_to_backend(request: Request) -> Response:
@@ -31,9 +41,8 @@ async def proxy_request_to_backend(request: Request) -> Response:
     backend_request_params['timeout'] = ClientTimeout(total=backend_request_params['timeout'])
 
     logger.debug(f'{request} proxying to backend {backend_request_params["url"]}')
-    session = await get_aiohttp_session()
 
-    backend_response: ClientResponse = await session.request(allow_redirects=False, **backend_request_params)
+    backend_response: ClientResponse = await aiohttp_request(allow_redirects=False, **backend_request_params)
 
     response_log = f'{request} backend responded with HTTP {backend_response.status}'
     if 300 <= backend_response.status <= 308:
@@ -64,7 +73,8 @@ async def construct_backend_request_params(request: Request) -> Dict:
     request_query = getattr(override, 'query', request.url.query)
     upstream_url = backend_listener.get_upstream_url(request_path)
     if request_query:
-        upstream_url = upstream_url + '?' + request_query
+        query_params = MultiDict(parse_qsl(request_query, keep_blank_values=True))
+        upstream_url = upstream_url.include_query_params(**query_params)
 
     # we always use the mutable headers set in the middleware runner, so that
     # other middleware steps can delete / change request headers

@@ -3,21 +3,23 @@ from time import time
 from typing import Optional
 
 from liminus_auth import UnauthenticatedException, validate_jwt
+from starlette.datastructures import URL
 from starlette.requests import Request
 from starlette.responses import Response
 
 from liminus.middlewares.mixins.session_mixin import Session, SessionHandlerMixin
 from liminus.proxy_request import http_request
+from liminus.redis_client import redis_client
 from liminus.settings import logger
 from liminus.utils import get_cache_hash_key, to_seconds
 
 
 class JwtHandlerMixin(SessionHandlerMixin):
-    AUTH_JWT_HEADER = ''
-    JWKS_URL = ''
-    REFRESH_JWT_URL = ''
-    REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS = to_seconds(minutes=30)
-    REFRESH_JWT_SEMAPHORE_TTL_SECONDS = 10
+    AUTH_JWT_HEADER: str
+    JWKS_URL: URL
+    REFRESH_JWT_URL: URL
+    REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS: int = to_seconds(minutes=30)
+    REFRESH_JWT_SEMAPHORE_TTL_SECONDS: int = 10
 
     async def _store_jwt_if_present(self, response: Response, session: Session) -> bool:
         # if the response has a member auth JWT, create a new session (and CSRF) and add this JWT to it
@@ -77,14 +79,14 @@ class JwtHandlerMixin(SessionHandlerMixin):
     async def _refresh_jwt(self, jwt):
         # set a semaphore in Redis, so we only have one concurrent refresh request at a time
         semaphore_key = get_cache_hash_key('jwt-refresh-', jwt)
-        semaphore_created = await self.redis_client.setnx(semaphore_key, '1')
+        semaphore_created = await redis_client().setnx(semaphore_key, '1')
         if not semaphore_created:
             # the semaphore already existed, this request should not attempt to refresh the JWT
             return jwt
 
         # this semaphore expires after a few seconds
         # we don't need to explicitly delete it - let it provide poor-man's rate limiting
-        await self.redis_client.expire(semaphore_key, self.REFRESH_JWT_SEMAPHORE_TTL_SECONDS)
+        await redis_client().expire(semaphore_key, self.REFRESH_JWT_SEMAPHORE_TTL_SECONDS)
 
         response = await http_request('POST', self.REFRESH_JWT_URL, json={'jwt': jwt})
         if response.status == HTTPStatus.OK:

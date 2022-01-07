@@ -5,10 +5,10 @@ from liminus.base.backend import Backend, ReqSettings
 
 
 class GkRequestMiddleware:
-    async def handle_request(self, req: Request, settings: ReqSettings, backend: Backend):
+    async def handle_request(self, req: Request, reqset: ReqSettings, backend: Backend):
         pass
 
-    async def handle_response(self, res: Response, req: Request, settings: ReqSettings, backend: Backend):
+    async def handle_response(self, res: Response, req: Request, reqset: ReqSettings, backend: Backend):
         pass
 
     def __str__(self) -> str:

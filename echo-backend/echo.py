@@ -5,6 +5,9 @@ from starlette.routing import Route
 
 
 async def catch_all(request: Request):
+    if request.url.path == '/recaptcha/api/siteverify':
+        return JSONResponse({'success': True})
+
     # just echo the request URL back
     return JSONResponse({'method': request.method, 'url': request.url.path})
 

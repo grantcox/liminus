@@ -7,6 +7,9 @@ import socket
 from datetime import timedelta
 from os import getenv
 from typing import Optional, Pattern, Union
+from urllib.parse import urljoin
+
+from starlette.datastructures import URL
 
 
 def get_env_var(name: str, default: str = None):
@@ -24,6 +27,10 @@ def to_seconds(**kwargs):
 
 def php_bool(php_val) -> bool:
     return bool(int(php_val or 0))
+
+
+def url_join(url: Union[str, URL], path: str) -> URL:
+    return URL(urljoin(str(url), path))
 
 
 def strip_path_prefix(request_path: str, path: Optional[str] = None, path_regex: Optional[Pattern] = None) -> str:
