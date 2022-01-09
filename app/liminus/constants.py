@@ -4,6 +4,7 @@ class Headers:
     X_FORWARDED_FOR_CLIENT_IP_NORMALIZED = 'x-forwarded-for-client-normalized'
     CONNECTING_IP = 'connecting-ip'
     CONNECTING_IP_NORMALIZED = 'connecting-ip-normalized'
+    RECAPTCHA_TOKEN = 'recaptcha-token'
 
     CLOUDFLARE_CONNECTING_IP = 'cf-connecting-ip'
     X_FORWARDED_FOR = 'x-forwarded-for'
@@ -18,7 +19,7 @@ class Headers:
         'referer',
         'user-agent',
         'x-requested-with',
-    ]
+    }
     RESPONSE_DEFAULT_BLOCK = {
         'member-authentication-jwt',
         'rotate-csrf',

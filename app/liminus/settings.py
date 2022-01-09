@@ -14,6 +14,13 @@ config = {
     ########################################################################################
     'ENABLED_BACKENDS': [be.strip() for be in get_env_var('ENABLED_BACKENDS').split(',')],
     ########################################################################################
+    # Campaign settings, eg for recaptcha
+    ########################################################################################
+    'READONLY_DATABASE_DSN': get_env_var('READONLY_DATABASE_DSN', ''),
+    'CAMPAIGN_SETTINGS_CACHE_EXPIRY_SECONDS': 30,
+    'RECAPTCHA_VERIFY_URL': get_env_var('RECAPTCHA_VERIFY_URL', ''),
+    'RECAPTCHA_SECRET': get_env_var('RECAPTCHA_SECRET', ''),
+    ########################################################################################
     # CORS settings
     ########################################################################################
     'CORSMiddleware_args': {

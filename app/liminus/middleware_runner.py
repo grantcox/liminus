@@ -73,6 +73,9 @@ class GatekeeperMiddlewareRunner(BaseHTTPMiddleware):
         request.scope['backend_per_request_settings'] = settings
         request.state.headers = request.headers.mutablecopy()
 
+        # and every request through GK gets a special header indicating that
+        request.state.headers['Proxied-By'] = 'Gatekeeper'
+
     def _get_req_settings(self, request: Request, backend: Backend, listener: ListenPathSettings) -> ReqSettings:
         # the backend settings have a priority:
         #  1. exact path match

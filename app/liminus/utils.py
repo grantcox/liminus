@@ -22,6 +22,10 @@ def to_seconds(**kwargs):
     return int(timedelta(**kwargs).total_seconds())
 
 
+def php_bool(php_val) -> bool:
+    return bool(int(php_val or 0))
+
+
 def strip_path_prefix(request_path: str, path: Optional[str] = None, path_regex: Optional[Pattern] = None) -> str:
     if path is not None and request_path.startswith(path):
         offset = len(path)

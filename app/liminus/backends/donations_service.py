@@ -4,6 +4,7 @@ from liminus.base.backend import Backend, CsrfSettings, HeadersAllowedSettings, 
 from liminus.constants import Headers, HttpMethods
 from liminus.middlewares.add_ip_headers import AddIpHeadersMiddleware
 from liminus.middlewares.restrict_headers import RestrictHeadersMiddleware
+from liminus.middlewares.recaptcha_check import RecaptchaCheckMiddleware
 from liminus.settings import config
 from liminus.utils import get_env_var
 
@@ -28,7 +29,7 @@ if service_name in config['ENABLED_BACKENDS']:
                 ]
             )
         ),
-        middlewares=[AddIpHeadersMiddleware, RestrictHeadersMiddleware],
+        middlewares=[AddIpHeadersMiddleware, RecaptchaCheckMiddleware, RestrictHeadersMiddleware],
         routes=[
             RouteSettings(path='/donation/public_api/ping', allow_methods=[HttpMethods.GET]),
             RouteSettings(

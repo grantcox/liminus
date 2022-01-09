@@ -4,9 +4,11 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 
 [packages]
+aiomysql = "*"
 aioredis = "*"
 gunicorn = "*"
 httpx = "*"
+phpserialize = "*"
 pydantic = "*"
 python-multipart = "*"
 sentry-sdk = "*"

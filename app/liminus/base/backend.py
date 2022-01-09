@@ -1,3 +1,4 @@
+from enum import Enum
 import re
 from typing import Any, List, Optional, Pattern, Set, Type
 
@@ -31,9 +32,20 @@ class CsrfSettings(BaseModel):
     single_use: bool = True
 
 
+class RecaptchaEnabled(Enum):
+    DISABLED = 0
+    ALWAYS = 1
+    CAMPAIGN_SETTING = 2
+
+
+class RecaptchaSettings(BaseModel):
+    enabled: RecaptchaEnabled = RecaptchaEnabled.DISABLED
+
+
 class ReqSettings(BaseModel):
     CSRF: Optional[CsrfSettings] = None
     auth: Optional[AuthSettings] = None
+    recaptcha: Optional[RecaptchaSettings] = None
     allowed_request_headers: Optional[HeadersAllowedSettings] = None
     allowed_response_headers: Optional[HeadersAllowedSettings] = None
     middlewares: Optional[List[Type]] = None
@@ -100,6 +112,7 @@ class Backend(ReqSettings):
 
     CSRF: CsrfSettings = CsrfSettings()
     auth: AuthSettings = AuthSettings()
+    recaptcha: RecaptchaSettings = RecaptchaSettings()
     allowed_request_headers: HeadersAllowedSettings = HeadersAllowedSettings(allowlist=Headers.REQUEST_DEFAULT_ALLOW)
     allowed_response_headers: HeadersAllowedSettings = HeadersAllowedSettings(blocklist=Headers.RESPONSE_DEFAULT_BLOCK)
     middlewares: List[Type] = []
