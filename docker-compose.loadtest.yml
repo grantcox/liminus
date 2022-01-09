@@ -1,7 +1,19 @@
+# this file extends docker-compose.local.yml
+# when load testing, we want:
+#  - the app, in prod mode (no dev deps, not auto-reloading, less logging)
+#  - traefik
+#  - redis
+#  - echo backend
+#  - locust
+
 version: "3.3"
 
 services:
   app:
+    build:
+      args:
+        # overwrite the var set in docker-compose.local
+        BUILD_DEV: 0
     env_file:
       - .env.locust
     command: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 --workers 3
@@ -9,12 +21,16 @@ services:
   liminus-echo:
     build:
       context: "./echo-backend"
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
     volumes:
       - ./echo-backend/:/usr/app/
     command: gunicorn echo:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 --workers 5
     ports:
       - 5000
     networks:
-      - internal
+      - liminus_internal
+
+  locust:
+    build:
+      context: "./locust-load-test"
+    networks:
+      - liminus_internal

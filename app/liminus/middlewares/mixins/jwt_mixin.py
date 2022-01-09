@@ -1,8 +1,6 @@
 from http import HTTPStatus
-from time import time
 from typing import Optional
 
-from liminus_auth import UnauthenticatedException, validate_jwt
 from starlette.datastructures import URL
 from starlette.requests import Request
 from starlette.responses import Response
@@ -44,29 +42,7 @@ class JwtHandlerMixin(SessionHandlerMixin):
             # nothing to do
             return None
 
-        stored_jwt = valid_jwt = session.session_data['jwt']
-        try:
-            payload = validate_jwt(stored_jwt, self.JWKS_URL) or {}
-            expiration_time = payload['exp']
-            remaining_time = expiration_time - time()
-
-            # if the JWT expires soon, refresh now
-            if remaining_time < self.REFRESH_JWT_IF_TTL_LESS_THAN_SECONDS:
-                logger.info(f'{request} JWT expires in {remaining_time} seconds, refreshing')
-                valid_jwt = await self._refresh_jwt(stored_jwt)
-
-        except UnauthenticatedException as exc:
-            # this JWT is no longer valid, drop it
-            logger.info(f'{request} JWT is invalid or could not be refreshed: {exc}')
-            valid_jwt = None
-
-        # if the JWT changed (was refreshed or removed), save that to the session
-        if valid_jwt != stored_jwt:
-            if valid_jwt is None:
-                del session.session_data['jwt']
-            else:
-                session.session_data['jwt'] = valid_jwt
-            await self._store_session(session)
+        valid_jwt = session.session_data['jwt']
 
         if valid_jwt:
             # append the JWT to the backing service request

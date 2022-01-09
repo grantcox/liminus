@@ -3,14 +3,22 @@
 # Runs load tests with Locust.io
 ########################################################################################
 
-set -ex
+set -eu
+#  -e: If any command fails, the whole script should exit with failure
+#  -u: Treat unset variables as an error, and immediately exit.
 
-DOCKER_REGISTRY="912617429107.dkr.ecr.us-west-2.amazonaws.com"
+# by default the load tests run against port 8091, eg our local traefik
+TARGET_HOST="${TARGET_HOST:-https://host.docker.internal:8091}"
 
-if [[ -z $PROJECT ]]; then
-    PROJECT="liminus-local"
-fi
+run-docker-compose() {
+    docker-compose \
+        -f docker-compose.yml \
+        -f docker-compose.local.yml \
+        -f docker-compose.loadtest.yml \
+        $@
+}
 
+# create a custom .env file for the load testing, pointing all backends to our echo server
 cat .env.template \
     | sed 's/_DSN=http.*/_DSN=http:\/\/liminus-echo:5000/g' \
     | sed 's/RECAPTCHA_VERIFY_URL=.*/RECAPTCHA_VERIFY_URL=http:\/\/liminus-echo:5000\/recaptcha\/api\/siteverify/g' \
@@ -20,65 +28,30 @@ cat .env.template \
     | sed 's/IS_LOAD_TESTING=.*/IS_LOAD_TESTING=True/g' \
     > .env.locust
 
-PROJECT=$PROJECT docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.local.yml \
-    -f docker-compose.loadtest.yml \
-    down
+run-docker-compose up --build --detach
 
-# we always rebuild the docker containers as we assume some code has changed since last time
-PROJECT=$PROJECT docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.local.yml \
-    -f docker-compose.loadtest.yml \
-    --project-name "$PROJECT" \
-    up --detach --build
+# from here on if something fails, we still shut down these containers
+trap 'run-docker-compose down' EXIT
 
-# PROJECT=$PROJECT docker-compose \
-#     -f docker-compose.yml \
-#     -f docker-compose.local.yml \
-#     -f docker-compose.loadtest.yml \
-#     --project-name "$PROJECT" \
-#     logs --follow --tail 100
-# exit 0
-
+# give the containers a little time to fully load before starting the load test
 sleep 5
 
-if [[ -z $TARGET_HOST ]]; then
-    TARGET_HOST=https://host.docker.internal:8091
-fi
+# locust will exit with a failure code if the tests were just too slow
+# so we disable "fail out on any error code"
+set +e
 
-IMAGE_NAME="locust:latest"
-RUN_TIME="0h0m30s"
-
-echo "Running load tests against host $TARGET_HOST for $RUN_TIME"
-docker run \
-    --env PYTHONDONTWRITEBYTECODE=1 \
-    --name="$CONTAINER_NAME" \
-    -v "$PWD/app/tests/load-test/:/etc/locust/" \
-    --rm \
-    $IMAGE_NAME -f /etc/locust/locustfile.py --headless -u 7 -r 1 --run-time "$RUN_TIME" --stop-timeout 30 -H ${TARGET_HOST}
-
+run-docker-compose run locust \
+    locust -f /etc/locust/locustfile.py --headless \
+    --users 7 --spawn-rate 1 --run-time "0h0m30s" \
+    --stop-timeout 30 \
+    --host ${TARGET_HOST}
 result=$?
 
 if test $result -eq 0
 then
- echo "Load tests ran successfully."
+    echo "Load tests ran successfully."
 else
- >&2 echo "Load tests failed."
+    >&2 echo "Load tests failed."
 fi
-
-# PROJECT=$PROJECT docker-compose \
-#     -f docker-compose.yml \
-#     -f docker-compose.local.yml \
-#     -f docker-compose.loadtest.yml \
-#     --project-name "$PROJECT" \
-#     logs --follow --tail 100
-
-docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.local.yml \
-    -f docker-compose.loadtest.yml \
-    down
 
 exit $result

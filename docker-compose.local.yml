@@ -1,3 +1,11 @@
+# in our local dev env, we want:
+#  - the app, auto-reloading, debug-level logs / messages
+#  - linting / testing (which require both dev + prod deps)
+#  - traefik
+#  - redis
+# and we need to be on both the internal service network, and the
+# intra_service_network network so we can communicate with other services
+
 version: "3.3"
 
 services:
@@ -10,11 +18,12 @@ services:
       - ./app/:/usr/app/
     labels:
       - "service.name=liminus"
-      - "traefik.docker.network=traefik_default"
+      - "traefik.docker.network=liminus_internal"
     command: uvicorn main:app --reload --host 0.0.0.0 --port 5000 --no-server-header --no-date-header
     ports:
       - 5000
     networks:
+      - liminus_internal
       - intra_service_network
 
   traefik:
@@ -30,7 +39,7 @@ services:
       - ./traefik/certs/local-liminus.crt:/etc/ssl/certs/public.crt
       - ./traefik/certs/local-liminus.key:/etc/ssl/private/private.key
     networks:
-      traefik_default:
+      liminus_internal:
       intra_service_network:
         aliases:
           - gatekeeper.liminus
@@ -39,8 +48,9 @@ services:
     image: redis:latest
     restart: unless-stopped
     networks:
-      - internal
+      - liminus_internal
 
 networks:
+  liminus_internal:
   intra_service_network:
     external: true

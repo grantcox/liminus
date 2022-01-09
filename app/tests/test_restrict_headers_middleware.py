@@ -70,8 +70,8 @@ def test_blocklist_has_priority(headers):
     filter = HeadersAllowedSettings(allowlist={'Host', 'cookie'}, blocklist={'cookie'})
     expected_headers = {k: base_headers[k] for k in ['host']}
 
-    a, b = RestrictHeadersMiddleware()._filter_headers(headers, headers, filter)
-    assert dict(headers) == expected_headers, f'{a} {b}'
+    results = RestrictHeadersMiddleware()._filter_headers(headers, headers, filter)
+    assert dict(headers) == expected_headers, f'{results}'
 
 
 def test_integration(client):

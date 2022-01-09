@@ -4,7 +4,7 @@ repos:
       - id: black
         name: Black
         description: Runs Black auto-formatting
-        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run black --skip-string-normalization --line-length 120
+        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run black --config=app/pyproject.toml
         files: .
         types: [python]
         language: system
@@ -13,7 +13,7 @@ repos:
       - id: isort
         name: iSort
         description: Runs isort to automatically sort imports alphabetically
-        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run isort --settings-path=setup.cfg
+        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run isort --settings-path=app/setup.cfg
         files: .
         types: [python]
         language: system
@@ -22,7 +22,7 @@ repos:
       - id: mypy
         name: Mypy
         description: Runs Mypy static type checker
-        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run mypy --config-file=setup.cfg
+        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run mypy --config-file=app/setup.cfg
         files: .
         types: [python]
         language: system
@@ -31,7 +31,7 @@ repos:
       - id: flake8
         name: Flake8
         description: Runs Flake8 static code analysis
-        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run flake8 --config=setup.cfg
+        entry: env PIPENV_PIPFILE=app/Pipfile pipenv run flake8 --config=app/setup.cfg
         files: .
         types: [python]
         language: system

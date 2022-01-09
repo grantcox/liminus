@@ -5,4 +5,4 @@
 
 set -e
 
-./scripts/docker-compose-local.sh up --detach $@
+./scripts/docker-compose-local.sh up --build --detach $@

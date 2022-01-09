@@ -5,12 +5,12 @@ This project is a python-based web API proxy, to be the only end-user entry poin
  - proxy requests to the appropriate backend (internal) services
  - support a flexible set of enabled backends, and backend middleware steps, so we can run this service in different contexts (eg a different deploy for staff vs public)
  - be the place where we strictly filter requests, eg:
-   -- required auth tokens
-   -- require CSRF tokens
-   -- filter to acceptable request formats and headers
-   -- parse and re-issue all request bodies
-   -- filter response headers
-   -- rate limit requests
+   - - required auth tokens
+   - - require CSRF tokens
+   - - filter to acceptable request formats and headers
+   - - parse and re-issue all request bodies
+   - - filter response headers
+   - - rate limit requests
 
 The intention of this project is to replace our Tyk-based gatekeeper, as Tyk's python middleware support is very rudimentary, and leads to a poor overall experience (development, debugging, performance, and memory leaks).
 
@@ -19,14 +19,18 @@ The intention of this project is to replace our Tyk-based gatekeeper, as Tyk's p
 Run the following to bootstrap your local environment:
 
 ```sh
- `./scripts/bootstrap.sh`
+ ./scripts/bootstrap.sh
 ```
 
-The boostrap script will:
+The bootstrap script will:
 
 - Set up the `.env` file if it doesn't exist yet. We use the `.env` file to define environment variables. This file contains API keys, other secrets and other values that might be specific to your local environment so it is ignored in git. After changing `.env.template` it is a good idea to manually update your `.env` to reflect that change or deleting it and running `./scripts/bootstrap.sh` again.
 
 - Add `local.liminus` to your machine's `/etc/hosts` file.
+
+- Install the linting pre-commit hook
+
+- Ensure the external `intra_service_network` docker network exists
 
 ## Running it locally
 
@@ -42,7 +46,7 @@ To stop the containers, run:
 ./scripts/down.sh
 ```
 
-This will automatically setup the dependencies and run the server at https://local.liminus:8078. You can check to see that the service is running successfully by viewing https://local.liminus:8078/health/ping.
+This will automatically setup the dependencies and run the server at https://local.liminus:8091. You can check to see that the service is running successfully by viewing https://local.liminus:8091/health/ping.
 
 The uWSGI server can also be accessed directly without going through Traefik. To do that you can check the port on the host with `./scripts/docker-compose-local.sh ps`. You'll see output like this:
 
@@ -55,7 +59,6 @@ local-liminus_app_1           uvicorn main:app --reload  ...   Up      0.0.0.0:6
 
 In this example, the uvicorn server can be accessed through HTTP on port `61625`. An example URL would be http://localhost:61625/health/ping.
 Please note this must be accessed via HTTP, not HTTPS - our TLS is terminated by Traefik which this method bypasses.
-Have a look at [app/README.md](app/README.md) for service specific documentation.
 
 ### Debugging
 
@@ -95,6 +98,22 @@ We've got wrapper scripts around various docker compose commands to save typing.
 ./scripts/docker-compose-local.sh exec app /bin/bash  # shell into the app container
 ```
 
+### Testing
+
+To run unit and integration tests:
+
+```sh
+./scripts/run-tests.sh
+```
+
+#### Load tests
+
+To run load tests:
+
+```sh
+./scripts/run-load-tests.sh
+```
+
 ## Code quality
 
 ### Git hooks
@@ -111,11 +130,15 @@ We also use [isort](https://pycqa.github.io/isort/) to automatically sort import
 
 We use [Mypy](https://mypy.readthedocs.io/en/stable/) which is a static type checker and [Flake8](http://flake8.pycqa.org/) which is a wrapper around PyFlakes, pycodestyle, and McCabe to maintain code style.
 
-#### Load tests
-
-To run load tests:
+To run a full static analysis, you can run this script:
 
 ```sh
-./scripts/run-load-tests.sh
+./scripts/run-static-analysis.sh
+```
+
+To let black and isort fix the files locally:
+
+```sh
+./scripts/run-static-analysis.sh --apply
 ```
 

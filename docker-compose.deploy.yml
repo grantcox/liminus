@@ -1,0 +1,25 @@
+version: "3.3"
+
+# in our deploy environments, traefik is managed by the host
+# as it persists over deploys, and handles the blue-green deployment
+# the "traefik_default" network is how traefik will communicate with new containers
+networks:
+  traefik_default:
+    external: true
+
+services:
+  app:
+    # when deploying we never build the app, pull the built image for this deploy revision
+    image: ${DOCKER_REGISTRY}/avaaz/liminus:${IMAGE_TAG}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: "liminus"
+        tag: "$HOSTNAME-{{.Name}}"
+        awslogs-create-group: "true"
+    labels:
+      - "traefik.docker.network=traefik_default"
+      - "traefik.http.routers.liminus.middlewares=retry4@docker"
+      - "traefik.http.middlewares.retry4.retry.attempts=4"
+    networks:
+      - traefik_default

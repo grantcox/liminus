@@ -161,13 +161,13 @@ class GatekeeperPyUser(FastHttpUser):
 
 @events.quitting.add_listener
 def _(environment, **kw):
-    """
+    '''
     This hook defines pass/fail criteria for load tests.
     Note that this applies to aggregate stats, not the performance of individual endpoints.
     These criteria can be customized for different services.
     Docs:
     https://docs.locust.io/en/1.3.0/running-locust-without-web-ui.html#controlling-the-exit-code-of-the-locust-process
-    """
+    '''
     if environment.stats.total.fail_ratio > 0.01:
         print('Test failed due to failure ratio > 1%')
         environment.process_exit_code = 1

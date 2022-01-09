@@ -22,10 +22,7 @@ tls:
 # Enable docker provider
 providers:
   docker:
-    # This network name should not change. It is created by docker-compose and
-    # should be used as external network by services that use traefik.
-    # See stats-service for an example.
-    network: traefik_default
+    network: liminus_internal
     exposedByDefault: false
     constraints: "Label(`service.name`, `liminus`)"
   # This file provider is needed for Traefik to pick our custom certificate

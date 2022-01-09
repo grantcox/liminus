@@ -30,3 +30,8 @@ then
 fi
 echo "installing pre-commit hook"
 pre-commit install
+
+
+if ! docker network ls | grep -q "intra_service_network"; then
+    docker network create intra_service_network
+fi
