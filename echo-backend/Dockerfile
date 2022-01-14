@@ -6,7 +6,7 @@ WORKDIR /usr/app/
 # install service dependencies
 COPY * ./
 
-RUN pipenv install --system --deploy --ignore-pipfile --sequential --verbose
+RUN pipenv install --system --deploy --ignore-pipfile --verbose
 
 EXPOSE 5000
 

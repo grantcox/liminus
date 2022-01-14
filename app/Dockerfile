@@ -10,17 +10,20 @@ ARG DOCKER_REGISTRY
 FROM python:3.9-slim-buster as both
 # commands here apply to both prod and dev
 
+RUN apt-get update
 RUN pip install --upgrade pipenv
 
 WORKDIR /usr/app/
 EXPOSE 5000
 
 # install service dependencies
+RUN echo "Installing required build packages" && apt-get install -y gcc g++
 COPY Pipfile* ./
 
 # always install prod deps
-RUN pipenv install --system --deploy --ignore-pipfile --sequential --verbose
+RUN pipenv install --system --deploy --ignore-pipfile --verbose
 
+RUN echo "Removing build packages" && apt-get remove -y gcc g++
 
 # ------------------
 FROM both AS dev-eq-0
@@ -29,7 +32,7 @@ FROM both AS dev-eq-0
 # ------------------
 FROM both AS dev-eq-1
 # commands here only apply to dev environments
-RUN pipenv install --dev --system --deploy --ignore-pipfile --sequential --verbose
+RUN pipenv install --dev --system --deploy --ignore-pipfile --verbose
 
 
 # ------------------
